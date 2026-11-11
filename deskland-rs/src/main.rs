@@ -1,4 +1,4 @@
-//! deskland-rs: bản Rust native (1 tiến trình, OpenGL 3.3) của Deskland — 14 chủ đề tương tác thích ứng.
+//! deskland-rs: bản Rust native (1 tiến trình, OpenGL 3.3) của Deskland — 16 chủ đề tương tác thích ứng.
 //! Chạy:   deskland-rs.exe [--theme <id>] [--fps 20] [--settings]
 //! Thoát:  deskland-rs.exe --quit   (hoặc menu khay hệ thống)
 
@@ -12,6 +12,7 @@ mod web;
 mod themes {
     pub mod aquarium;
     pub mod beach;
+    pub mod boxing_ring;
     pub mod cat_hill;
     pub mod cats;
     pub mod commute;
@@ -102,6 +103,7 @@ pub const THEMES: &[(&str, &str, usize)] = &[
     ("commute", "Chuyến xe chiều", 114),
     ("summer-porch", "Hiên nhà ngày hạ", 115),
     ("cats", "Mèo con trên đồi", 116),
+    ("boxing-ring", "Võ đài quyền anh", 117),
 ];
 
 pub fn canonical_theme(id: &str) -> Option<&'static str> {
@@ -115,6 +117,7 @@ pub fn canonical_theme(id: &str) -> Option<&'static str> {
         "bus" | "evening-bus" | "commute-bus" => Some("commute"),
         "porch" | "corgi" | "corgi-porch" | "veranda" | "summer_porch" => Some("summer-porch"),
         "kittens" | "hillside-kittens" => Some("cats"),
+        "boxing" | "ring" | "arcade-boxing" | "punch" | "boxing_ring" => Some("boxing-ring"),
         other => THEMES.iter().find(|&&(tid, _, _)| tid == other).map(|&(tid, _, _)| tid),
     }
 }
@@ -477,7 +480,8 @@ fn web_init(app: &App) -> serde_json::Value {
                 "aquarium",
                 "commute",
                 "summer-porch",
-                "cats"
+                "cats",
+                "boxing-ring"
             ],
             // Chưa port: cây dừa, cậu bé, mèo -> ẩn thanh trượt, xem trước cũng tắt cho giống desktop
             "hide": ["palms", "showBoy", "showCat"],
@@ -634,6 +638,7 @@ impl App {
             "aquarium" => Box::new(themes::aquarium::Aquarium::new(gl, w, h, buf_w, buf_h, scale, seed, themes::aquarium::Params::from_json(p), rs, now)),
             "summer-porch" => Box::new(themes::summer_porch::SummerPorch::new(gl, w, h, buf_w, buf_h, scale, seed, themes::summer_porch::Params::from_json(p), rs, now)),
             "cats" => Box::new(themes::cats::Cats::new(gl, w, h, buf_w, buf_h, scale, seed, themes::cats::Params::from_json(p), rs, now)),
+            "boxing-ring" => Box::new(themes::boxing_ring::BoxingRing::new(gl, w, h, buf_w, buf_h, scale, seed, themes::boxing_ring::Params::from_json(p), rs, now)),
             _ => Box::new(themes::beach::Beach::new(gl, w, h, buf_w, buf_h, scale, seed, themes::beach::Params::from_json(p), rs, now)),
         }
     }
@@ -658,6 +663,7 @@ impl App {
             "commute" => themes::commute::FRAG,
             "summer-porch" => themes::summer_porch::FRAG,
             "cats" => themes::cats::FRAG,
+            "boxing-ring" => themes::boxing_ring::FRAG,
             _ => themes::beach::FRAG,
         };
         let t0 = Instant::now();

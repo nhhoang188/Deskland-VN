@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deskland · Võ đài quyền anh</title>
+<!--
+  Deskland · Chủ đề Võ đài quyền anh (Arcade Boxing Ring; WebGL2 2D)
+  - Phòng tập & võ đài quyền anh Arcade nâng cao góc nhìn 3/4, cửa sổ kính teal, bao cát treo, lốp xe & búa tạ
+  - Hai võ sĩ đối kháng kết hợp hệ lò xo giảm chấn Squash & Stretch, phóng găng đa vùng, khói tròn puff, sao choáng @ @
+  - Thảm tập EVA tối màu tự động ôm gọn quanh biểu tượng Desktop để tên tệp luôn nổi bật
+  Shader dùng chung với bản Rust: boxing-ring.frag
+-->
+<style>
+  :root { --taskbar: 48px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #262228; }
+  #art { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; }
+  #ghosts { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.preview #ghosts, body.demo #ghosts { display: block; }
+  .ghost { position: absolute; }
+  .ghost i { position: absolute; left: 50%; top: 4px; width: 48px; height: 48px; margin-left: -24px; border-radius: 9px;
+    background: rgba(255,255,255,.88); box-shadow: 3px 6px 10px rgba(10,12,24,.45); }
+  .ghost b { position: absolute; left: 14%; right: 14%; top: 60px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.82); }
+  #hud { position: fixed; right: 14px; top: 14px; color: #fffdf5; font: 600 13px "Segoe UI", system-ui, sans-serif;
+    background: rgba(24,20,30,.62); padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.15);
+    text-shadow: 0 1px 2px rgba(0,0,0,.55); pointer-events: none; display: none; }
+  body.demo #hud { display: block; }
+</style>
+</head>
+<body>
+<canvas id="art"></canvas>
+<div id="hud">🥊 Click võ sĩ để tung đòn Squash &amp; Stretch · Bao cát · Lốp xe · Đồng hồ hiệp</div>
+<script>
+'use strict';
+const TASKBAR = 48, STEP = 5, MORPH_MS = 1800;
+const QS = new URLSearchParams(location.search);
+const WALL = QS.has('wallpaper'), PREVIEW = QS.has('preview'), DEMO = !WALL && !PREVIEW;
+
+// Giá trị mặc định khớp themes.json & boxing_ring.rs
+const DEFAULTS = {
+  bounciness: 1.25,
+  punchPower: 1.0,
+  autoSpar: 0,
+  gloveStyle: 0,
+  hudMode: 0,
+  sigma: 74,
+  warp: 22
+};
+const P = Object.assign({}, DEFAULTS);
+
+/* ---------------- Nhiễu CPU + texture nhiễu (giống summer-porch.html / engine.rs) ---------------- */
+let seed = (Math.random() * 1e6) | 0;
+function hash2(x, y, k = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x, y, k = 0) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy, k), b = hash2(ix + 1, iy, k), c = hash2(ix, iy + 1, k), d = hash2(ix + 1, iy + 1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function fbm(x, y, k = 0) {
+  let a = 0.5, s = 0;
+  for (let i = 0; i < 4; i++) { s += a * vnoise(x, y, k + i * 7); x = x * 2.03 + 17.1; y = y * 2.03 + 17.1; a *= 0.5; }
+  return s;
+}
+function tileNoise(x, y, px, py, k) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const m = (v, p) => ((v % p) + p) % p;
+  const x0 = m(ix, px), x1 = m(ix + 1, px), y0 = m(iy, py), y1 = m(iy + 1, py);
+  const a = hash2(x0, y0, k), b = hash2(x1, y0, k), c = hash2(x0, y1, k), d = hash2(x1, y1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function tileFbm(u, v, periods, k) {
+  let s = 0, w = 0.5, tw = 0;
+  for (let i = 0; i < periods.length; i++) { s += w * tileNoise(u * periods[i], v * periods[i], periods[i], periods[i], k + i * 13); tw += w; w *= 0.5; }
+  return s / tw;
+}
+function makeNoiseImage() {
+  const S = 256, d = new Uint8Array(S * S * 4);
+  const chans = [[8, 16, 32, 64], [8, 16, 32, 64], [8, 16, 32], [16, 32, 64, 128]];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = x / S, v = y / S, i = (y * S + x) * 4;
+    for (let c = 0; c < 4; c++) d[i + c] = Math.min(Math.max((tileFbm(u, v, chans[c], 100 + c * 50) - 0.5) * 1.9 + 0.5, 0), 1) * 255;
+  }
+  return { S, d };
+}
+
+/* ---------------- Trường khoảng cách quanh biểu tượng (thảm cao su phòng tập) ---------------- */
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;
+function buildNoise() {
+  const N = Gw * Gh;
+  NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
+  for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
+    const i = gy * Gw + gx, x = gx * STEP, y = gy * STEP;
+    NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
+    NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
+  }
+}
+function computeField(rects) {
+  const N = Gw * Gh, f1 = new Float32Array(N);
+  const sig = P.sigma, is1 = 1 / (sig * sig), wa = P.warp * 2.2, wmax = wa * 0.5;
+  for (const r of rects) {
+    const R = 5.5 * sig + Math.max(r.hw, r.hh) * 0.5 + wmax;
+    const gx0 = Math.max(0, Math.floor((r.cx - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + R) / STEP));
+    const gy0 = Math.max(0, Math.floor((r.cy - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + R) / STEP));
+    const chw = r.hw * 0.5, chh = r.hh * 0.5;
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const i = gy * Gw + gx;
+      const qx = gx * STEP + NZ.wx[i] * wa, qy = gy * STEP + NZ.wy[i] * wa;
+      let dx = Math.abs(qx - r.cx) - chw, dy = Math.abs(qy - r.cy) - chh;
+      if (dx < 0) dx = 0; if (dy < 0) dy = 0;
+      f1[i] += Math.exp(-(dx * dx + dy * dy) * is1);
+    }
+  }
+  const c0 = Math.sqrt(-Math.log(0.35)), s = new Float32Array(N), fMin = Math.exp(-30);
+  for (let i = 0; i < N; i++) {
+    const g = Math.log(Math.max(f1[i], fMin));
+    s[i] = sig * (Math.sqrt(Math.max(-g, 0)) - c0) - sig * 0.6 * Math.max(g, 0);
+  }
+  return s;
+}
+
+/* ---------------- WebGL2 ---------------- */
+const cv = document.getElementById('art');
+const gl = cv.getContext('webgl2', { antialias: false });
+const VS = `#version 300 es
+void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+let PR = null;
+function program(fs) {
+  const mk = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader'); }
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  const U = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const nm = gl.getActiveUniform(p, i).name.replace(/\[0\]$/, ''); U[nm] = gl.getUniformLocation(p, nm); }
+  return { p, U };
+}
+gl.bindVertexArray(gl.createVertexArray());
+let noiseTex = null;
+function buildNoiseTex() {
+  const { S, d } = makeNoiseImage();
+  if (noiseTex) gl.deleteTexture(noiseTex);
+  noiseTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, S, S, 0, gl.RGBA, gl.UNSIGNED_BYTE, d);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+}
+const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+function toHalf(v) {
+  f32[0] = v; const x = u32[0];
+  const sign = (x >>> 16) & 0x8000, e = ((x >>> 23) & 0xff) - 112, m = x & 0x7fffff;
+  if (e <= 0) return sign; if (e >= 31) return sign | 0x7c00;
+  return sign | (e << 10) | (m >>> 13);
+}
+const ftex = [null, null];
+let fromI = 0, toI = 0, morphT0 = -1e9, morphDur = MORPH_MS, FA = null, FB = null, curMix = 1;
+function allocField() {
+  for (let i = 0; i < 2; i++) {
+    if (ftex[i]) gl.deleteTexture(ftex[i]);
+    ftex[i] = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, ftex[i]);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, Gw, Gh, 0, gl.RED, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+}
+function uploadField(i, s) {
+  const d = new Uint16Array(Gw * Gh);
+  for (let k = 0; k < d.length; k++) d[k] = toHalf(s[k]);
+  gl.bindTexture(gl.TEXTURE_2D, ftex[i]);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, Gw, Gh, gl.RED, gl.HALF_FLOAT, d);
+}
+let icons = [];
+const iconRects = () => icons.map(ic => ({ cx: ic.x + ic.w / 2, cy: ic.y + ic.h / 2, hw: ic.w / 2 - 4, hh: ic.h / 2 - 2 }));
+function commit(fromEmpty = false) {
+  const nf = computeField(iconRects());
+  const target = 1 - toI;
+  if (fromEmpty) { FA = computeField([]); uploadField(toI, FA); } else FA = FB;
+  FB = nf; uploadField(target, FB);
+  fromI = toI; toI = target;
+  morphT0 = performance.now(); morphDur = fromEmpty ? 2600 : MORPH_MS;
+  needDraw = true;
+}
+const seedU = () => (((seed % 997) + 997) % 997) * 0.37;
+
+/* ---------------- Hệ lò xo Squash & Stretch + Võ sĩ + Đạo cụ (khớp 1:1 với boxing_ring.rs) ---------------- */
+const rand = Math.random;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const mkSpring = (k, c) => ({ x: 0, v: 0, k, c });
+function stepSpring(sp, dt, target = 0) {
+  sp.v += ((target - sp.x) * sp.k - sp.v * sp.c) * dt;
+  sp.x += sp.v * dt;
+}
+
+function mkFighter(phaseOffset, blinkWait) {
+  return {
+    headX: mkSpring(125, 5.6),
+    headY: mkSpring(132, 5.8),
+    headRot: mkSpring(118, 5.2),
+    headSquash: mkSpring(138, 4.9),
+    facePushX: mkSpring(135, 5.8),
+    facePushY: mkSpring(135, 5.8),
+    dentX: 10, dentY: 0,
+    torsoShear: mkSpring(115, 5.8),
+    torsoSquash: mkSpring(128, 5.8),
+    bodyDent: mkSpring(118, 5.4),
+    lungeX: mkSpring(62, 6.4),
+    punchExt: 0,
+    weavePh: phaseOffset,
+    blinkCd: blinkWait,
+    blinkProg: -1,
+    winceTimer: 0,
+    dizzyTimer: 0,
+    hitFlash: 0,
+    hp: 1.0,
+    hpLag: 1.0,
+    lagHold: 0,
+    comboHits: 0,
+    comboWindow: 0
+  };
+}
+
+const fighters = [mkFighter(0.2, 2.5), mkFighter(2.3, 1.9)];
+const punches = Array.from({ length: 4 }, () => ({
+  active: false, age: 0, impacted: false, attacker: -1, target: -1,
+  zone: 'cheek', bagId: -1, origX: 0, origY: 0, tx: 0, ty: 0, dir: 0, peakScale: 0.92, powerMul: 1
+}));
+let nextPunchSlot = 0;
+const puffs = Array.from({ length: 6 }, () => ({ active: false, x: 0, y: 0, age: 0, seed: 0 }));
+let nextPuffSlot = 0;
+
+const bagRed = mkSpring(24, 1.85), bagDarkL = mkSpring(21, 1.75), bagRight = mkSpring(20, 1.75);
+const ringShake = mkSpring(240, 14.0);
+let tireSmash = 0, ropeVib = 0;
+let roundNum = 1, roundSec = 60, bellFlash = 0, comboGlow = 0;
+let sparCd = 2.6, userActiveTimer = 0;
+
+function tuneBounciness() {
+  const ds = clamp(1.35 / Math.sqrt(clamp(P.bounciness, 0.4, 2.5)), 0.60, 1.85);
+  for (const f of fighters) {
+    f.headX.c = 5.6 * ds; f.headY.c = 5.8 * ds; f.headRot.c = 5.2 * ds;
+    f.headSquash.c = 4.9 * ds; f.facePushX.c = 5.8 * ds; f.facePushY.c = 5.8 * ds;
+    f.torsoShear.c = 5.8 * ds; f.torsoSquash.c = 5.8 * ds; f.bodyDent.c = 5.4 * ds;
+  }
+}
+tuneBounciness();
+
+function sceneMetrics() {
+  const availH = Math.max(280, H - TASKBAR);
+  const s = Math.min(W / 1080, availH / 640);
+  return { availH, s, cx: W * 0.5 };
+}
+
+function fighterBaseFoot(idx) {
+  const { availH, s, cx } = sceneMetrics();
+  const f = fighters[idx], facing = idx === 0 ? 1 : -1;
+  const weaveX = Math.sin(f.weavePh * 0.85) * 7.5;
+  const bobY = Math.abs(Math.sin(f.weavePh * 1.7)) * 4.2 - 2.0;
+  return {
+    bx: cx - facing * 68 * s + weaveX * s,
+    by: availH * (idx === 0 ? 0.758 : 0.766),
+    bobY
+  };
+}
+
+function spawnPuff(x, y) {
+  const pf = puffs[nextPuffSlot % puffs.length];
+  nextPuffSlot++;
+  pf.active = true; pf.x = x; pf.y = y; pf.age = 0; pf.seed = 0.08 + rand() * 0.9;
+}
+
+function launchFighterPunch(attacker, target, zone, clickPos, powerMul) {
+  const { s } = sceneMetrics();
+  const facingAtt = attacker === 0 ? 1 : -1;
+  const attBase = fighterBaseFoot(attacker);
+  const attFx = attBase.bx + fighters[attacker].lungeX.x * s;
+  const tgtBase = fighterBaseFoot(target);
+  const tgtFx = tgtBase.bx + fighters[target].lungeX.x * s;
+  const headCx = tgtFx + fighters[target].headX.x * s;
+  const headCy = tgtBase.by - 115 * s + fighters[target].headY.x * s;
+  const torsoCy = tgtBase.by - 66 * s;
+
+  let tx, ty, origX, origY;
+  if (zone === 'top') {
+    tx = clickPos ? clamp(clickPos[0], headCx - 24 * s, headCx + 24 * s) : headCx;
+    ty = headCy - 18 * s;
+    origX = tx - facingAtt * 72 * s; origY = ty - 148 * s;
+  } else if (zone === 'cheek') {
+    tx = headCx - facingAtt * 12 * s;
+    ty = clickPos ? clamp(clickPos[1], headCy - 14 * s, headCy + 14 * s) : headCy - 2 * s;
+    origX = attFx - facingAtt * 38 * s; origY = ty + 26 * s;
+  } else if (zone === 'chin') {
+    tx = headCx - facingAtt * 10 * s;
+    ty = headCy + 8 * s;
+    origX = attFx + facingAtt * 8 * s; origY = attBase.by - 78 * s;
+  } else {
+    tx = tgtFx - facingAtt * 14 * s;
+    ty = clickPos ? clamp(clickPos[1], torsoCy - 16 * s, torsoCy + 20 * s) : torsoCy;
+    origX = attFx - facingAtt * 24 * s; origY = torsoCy + 34 * s;
+  }
+
+  fighters[attacker].punchExt = 1.0;
+  fighters[attacker].lungeX.v += facingAtt * 135 * powerMul;
+  fighters[attacker].torsoShear.v += -facingAtt * 3.8 * powerMul;
+
+  const g = punches[nextPunchSlot % punches.length];
+  nextPunchSlot++;
+  Object.assign(g, {
+    active: true, age: 0, impacted: false, attacker, target, zone, bagId: -1,
+    origX, origY, tx, ty, dir: Math.atan2(ty - origY, tx - origX),
+    peakScale: (0.86 + 0.12 * Math.min(1.6, P.punchPower)) * Math.sqrt(powerMul),
+    powerMul
+  });
+}
+
+function applyImpact(slot) {
+  const { s } = sceneMetrics();
+  const power = P.punchPower * slot.powerMul, bounce = P.bounciness;
+  spawnPuff(slot.tx, slot.ty);
+
+  if (slot.zone === 'bag') {
+    const dirSign = Math.cos(slot.dir) >= 0 ? 1 : -1;
+    if (slot.bagId === 0) bagRed.v += dirSign * 3.4 * power;
+    else if (slot.bagId === 1) bagDarkL.v += dirSign * 3.2 * power;
+    else bagRight.v += dirSign * 3.2 * power;
+    return;
+  }
+
+  const target = slot.target;
+  if (target < 0) return;
+  const facingTgt = target === 0 ? 1 : -1, pushDir = -facingTgt;
+  const f = fighters[target];
+  f.winceTimer = 0.85;
+  f.hitFlash = 1.0;
+  f.comboHits = f.comboWindow > 0 ? f.comboHits + 1 : 1;
+  f.comboWindow = 1.15;
+
+  if (slot.zone === 'top') {
+    f.headY.v += 340 * power;
+    f.headSquash.v += -9.2 * bounce * Math.sqrt(power);
+    f.torsoSquash.v += -4.8 * bounce * Math.sqrt(power);
+    f.dentX = 0; f.dentY = -18;
+    f.facePushY.v += 280 * bounce;
+    f.lungeX.v += pushDir * 75 * power;
+  } else if (slot.zone === 'cheek') {
+    f.headX.v += pushDir * 420 * power;
+    f.headRot.v += pushDir * 11.5 * power;
+    f.headSquash.v += -4.2 * bounce;
+    f.dentX = facingTgt * 15; f.dentY = 2;
+    f.facePushX.v += pushDir * 320 * bounce * Math.sqrt(power);
+    f.torsoShear.v += -pushDir * 5.2 * power;
+    f.lungeX.v += pushDir * 185 * power;
+  } else if (slot.zone === 'chin') {
+    f.headX.v += pushDir * 330 * power;
+    f.headY.v += -240 * power;
+    f.headRot.v += pushDir * 9.5 * power;
+    f.headSquash.v += 6.5 * bounce * Math.sqrt(power);
+    f.dentX = facingTgt * 14; f.dentY = 8;
+    f.facePushX.v += pushDir * 260 * bounce;
+    f.facePushY.v += -160 * bounce;
+    f.lungeX.v += pushDir * 155 * power;
+  } else {
+    f.bodyDent.v += 14.5 * bounce * Math.sqrt(power);
+    f.torsoShear.v += -facingTgt * 8.5 * power;
+    f.torsoSquash.v += -4.5 * bounce;
+    f.headY.v += 165 * power;
+    f.headRot.v += -pushDir * 5.2 * power;
+    f.lungeX.v += pushDir * 220 * power;
+  }
+
+  const dmg = clamp(0.075 * power, 0.03, 0.22);
+  f.hp = Math.max(0, f.hp - dmg);
+  f.lagHold = 0.45;
+  if (f.comboHits >= 4 || f.hp <= 0.01) {
+    f.dizzyTimer = 1.45;
+    f.lungeX.v += pushDir * 140;
+    comboGlow = 1.0;
+  }
+
+  const ropeKick = slot.zone === 'body' ? 5.2 : slot.zone === 'top' ? 4.2 : 3.2;
+  ropeVib = Math.min(7.5, ropeVib + ropeKick * power);
+  ringShake.v += 95 * power;
+
+  if (Math.abs(f.lungeX.x) > 95) {
+    ropeVib = Math.min(8.0, ropeVib + 2.8);
+    const tb = fighterBaseFoot(target);
+    spawnPuff(tb.bx + f.lungeX.x * s, tb.by - 58 * s);
+  }
+}
+
+function triggerNextRound() {
+  roundNum = (roundNum % 12) + 1;
+  roundSec = 60;
+  bellFlash = 1.0;
+  ropeVib = Math.min(6.0, ropeVib + 2.4);
+  for (const f of fighters) {
+    f.hp = 1; f.hpLag = 1; f.dizzyTimer = 0; f.comboHits = 0;
+  }
+}
+
+function stepWorld(dt) {
+  userActiveTimer = Math.max(0, userActiveTimer - dt);
+  bellFlash = Math.max(0, bellFlash - dt * 2.2);
+  comboGlow = Math.max(0, comboGlow - dt * 1.4);
+  ropeVib = Math.max(0, ropeVib - dt * 4.8);
+
+  if (tireSmash > 0) {
+    tireSmash += dt * 1.85;
+    if (tireSmash >= 1) tireSmash = 0;
+  }
+
+  roundSec -= dt * 0.65;
+  if (roundSec <= 0) triggerNextRound();
+
+  const sparMode = Math.round(P.autoSpar);
+  if (sparMode !== 1) {
+    sparCd -= dt;
+    if (sparCd <= 0) {
+      const attacker = rand() < 0.52 ? 0 : 1, target = 1 - attacker;
+      if (fighters[attacker].dizzyTimer <= 0.05) {
+        const r = rand();
+        const zone = r < 0.34 ? 'chin' : r < 0.68 ? 'cheek' : r < 0.88 ? 'body' : 'top';
+        launchFighterPunch(attacker, target, zone, null, sparMode === 2 ? 0.88 : 0.62);
+      }
+      sparCd = sparMode === 2 ? 0.26 + rand() * 0.32 : 2.6 + rand() * 2.1;
+    }
+  }
+
+  const subDt = dt / 3;
+  const wind = Math.sin(fighters[0].weavePh * 0.45) * 0.018;
+  for (let sIdx = 0; sIdx < 3; sIdx++) {
+    for (const f of fighters) {
+      stepSpring(f.headX, subDt); stepSpring(f.headY, subDt);
+      stepSpring(f.headRot, subDt); stepSpring(f.headSquash, subDt);
+      stepSpring(f.facePushX, subDt); stepSpring(f.facePushY, subDt);
+      stepSpring(f.torsoShear, subDt); stepSpring(f.torsoSquash, subDt);
+      stepSpring(f.bodyDent, subDt); stepSpring(f.lungeX, subDt);
+      f.lungeX.x = clamp(f.lungeX.x, -145, 145);
+      f.bodyDent.x = clamp(f.bodyDent.x, -0.35, 1.35);
+    }
+    stepSpring(bagRed, subDt, wind);
+    stepSpring(bagDarkL, subDt, -wind * 0.8);
+    stepSpring(bagRight, subDt, wind * 0.9);
+    stepSpring(ringShake, subDt, 0);
+  }
+
+  for (let i = 0; i < 2; i++) {
+    const f = fighters[i], wasDizzy = f.dizzyTimer > 0;
+    f.weavePh = (f.weavePh + dt * (wasDizzy ? 7.5 : 3.6)) % (Math.PI * 20);
+    f.punchExt = Math.max(0, f.punchExt - dt * 4.6);
+    f.winceTimer = Math.max(0, f.winceTimer - dt);
+    f.dizzyTimer = Math.max(0, f.dizzyTimer - dt);
+    f.hitFlash = Math.max(0, f.hitFlash - dt * 6.5);
+    f.comboWindow = Math.max(0, f.comboWindow - dt);
+    if (f.comboWindow <= 0) f.comboHits = 0;
+
+    if (wasDizzy && f.dizzyTimer <= 0 && f.hp < 0.25) {
+      f.hp = 1; f.hpLag = 1;
+      f.headRot.v += i === 0 ? 6 : -6;
+    } else if (f.dizzyTimer <= 0 && f.comboWindow <= 0 && f.hp < 1) {
+      f.hp = Math.min(1, f.hp + dt * 0.025);
+    }
+
+    if (f.lagHold > 0) f.lagHold -= dt;
+    else if (f.hpLag > f.hp) f.hpLag = Math.max(f.hp, f.hpLag - dt * 0.55);
+    else f.hpLag = f.hp;
+
+    if (f.blinkProg >= 0) {
+      f.blinkProg += dt * 7.5;
+      if (f.blinkProg >= 1) f.blinkProg = -1;
+    } else {
+      f.blinkCd -= dt;
+      if (f.blinkCd <= 0) { f.blinkProg = 0; f.blinkCd = 2.4 + rand() * 3.4; }
+    }
+  }
+
+  for (const g of punches) {
+    if (!g.active) continue;
+    g.age += dt;
+    if (!g.impacted && g.age >= 0.090) {
+      g.impacted = true;
+      applyImpact(g);
+    }
+    if (g.age >= 0.68) g.active = false;
+  }
+
+  for (const pf of puffs) {
+    if (!pf.active) continue;
+    pf.age += dt * 1.05;
+    if (pf.age >= 1) pf.active = false;
+  }
+}
+
+function handleClick(x, y) {
+  const { availH, s, cx } = sceneMetrics();
+  userActiveTimer = 2.2;
+
+  if (Math.round(P.hudMode) < 2) {
+    const hs = s * (Math.round(P.hudMode) === 1 ? 0.78 : 1.0);
+    if (Math.abs(x - cx) < 54 * hs && Math.abs(y - 44 * hs) < 36 * hs) {
+      triggerNextRound();
+      spawnPuff(cx, 44 * hs);
+      return;
+    }
+  }
+
+  const tireCx = cx - 420 * s, tireCy = availH * 0.845;
+  if (Math.abs(x - tireCx) < 78 * s && Math.abs(y - tireCy) < 54 * s) {
+    tireSmash = 0.01;
+    ringShake.v += 55;
+    spawnPuff(tireCx, tireCy - 10 * s);
+    return;
+  }
+
+  const bags = [
+    [0, cx - 388 * s, availH * 0.18 + 82 * s, 1],
+    [1, cx - 448 * s, availH * 0.29 + 86 * s, 1],
+    [2, cx + 425 * s, availH * 0.24 + 88 * s, -1],
+  ];
+  for (const [bagId, bx, by, fromSide] of bags) {
+    if (Math.abs(x - bx) < 40 * s && Math.abs(y - by) < 78 * s) {
+      const origX = bx - fromSide * 96 * s, origY = by + 18 * s;
+      const g = punches[nextPunchSlot % punches.length];
+      nextPunchSlot++;
+      Object.assign(g, {
+        active: true, age: 0, impacted: false, attacker: -1, target: -1,
+        zone: 'bag', bagId, origX, origY, tx: bx, ty: by,
+        dir: Math.atan2(by - origY, bx - origX), peakScale: 0.78, powerMul: 1
+      });
+      return;
+    }
+  }
+
+  const attacker = x >= cx ? 0 : 1, target = 1 - attacker;
+  const tb = fighterBaseFoot(target);
+  const tgtFx = tb.bx + fighters[target].lungeX.x * s;
+  const headCy = tb.by - 115 * s;
+  const relX = (x - tgtFx) / s, relY = (y - headCy) / s;
+  const zone = relY < -14 ? 'top' : (relY < 26 && Math.abs(relX) > 14) ? 'cheek' : relY < 26 ? 'chin' : 'body';
+  if (Math.round(P.autoSpar) === 0) sparCd = Math.max(sparCd, 1.8);
+  launchFighterPunch(attacker, target, zone, [x, y], 1.0);
+}
+
+/* ---------------- Vòng vẽ ---------------- */
+const U4 = n => new Float32Array(n * 4);
+const fPosA = U4(2), fHeadA = U4(2), fFaceA = U4(2), fTorsoA = U4(2), fExprA = U4(2);
+const glovesA = U4(4), gloveMetaA = U4(4), puffsA = U4(6);
+const T0 = performance.now();
+let lastT = 0, paused = false, needDraw = true;
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  const scale = PREVIEW ? 0.45 : Math.min(devicePixelRatio || 1, 0.85);
+  cv.width = Math.round(W * scale); cv.height = Math.round(H * scale); cv._scale = scale;
+  Gw = Math.ceil(W / STEP) + 2; Gh = Math.ceil(H / STEP) + 2;
+  buildNoise(); allocField();
+  FA = FB = null;
+  commit(true);
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (paused) {
+    lastT = 0;
+    if (needDraw) { needDraw = false; curMix = 1; draw(now); }
+    return;
+  }
+  const busy = userActiveTimer > 0 || tireSmash > 0 || Math.round(P.autoSpar) === 2;
+  if (now - lastT < (busy ? 20 : 42)) return;
+  const dt = lastT ? Math.min((now - lastT) / 1000, 0.1) : 0.03;
+  lastT = now;
+  const e = Math.min((now - morphT0) / morphDur, 1);
+  curMix = e < 0.5 ? 2 * e * e : 1 - Math.pow(-2 * e + 2, 2) / 2;
+  stepWorld(dt);
+  draw(now);
+}
+
+function draw(now) {
+  if (!PR) return;
+  const { p, U } = PR;
+  const t = (now - T0) / 1000;
+  gl.useProgram(p);
+  gl.viewport(0, 0, cv.width, cv.height);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, ftex[fromI]);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, ftex[toI]);
+  gl.uniform1i(U.uNoise, 0); gl.uniform1i(U.uFA, 1); gl.uniform1i(U.uFB, 2);
+  gl.uniform2f(U.uRes, cv.width / cv._scale, cv.height / cv._scale);
+  gl.uniform2f(U.uGrid, Gw, Gh);
+  gl.uniform1f(U.uScale, cv._scale);
+  gl.uniform1f(U.uSeed, seedU());
+  gl.uniform1f(U.uStep, STEP);
+  gl.uniform1f(U.uMix, curMix);
+  gl.uniform1f(U.uTime, t);
+  gl.uniform1f(U.uDebug, 0);
+
+  gl.uniform4f(U.uScene, Math.round(P.gloveStyle), Math.round(P.hudMode), ringShake.x, ropeVib);
+  gl.uniform4f(U.uHud, fighters[0].hp, fighters[0].hpLag, fighters[1].hp, fighters[1].hpLag);
+  gl.uniform4f(U.uRound, roundNum, roundSec, bellFlash, comboGlow);
+  gl.uniform4f(U.uGymProps, clamp(bagRed.x, -0.65, 0.65), clamp(bagDarkL.x, -0.65, 0.65), clamp(bagRight.x, -0.65, 0.65), tireSmash);
+
+  for (let i = 0; i < 2; i++) {
+    const { bx, by, bobY } = fighterBaseFoot(i);
+    const f = fighters[i];
+    const dizzySway = f.dizzyTimer > 0 ? Math.sin(t * 10 + i) * 7.5 : 0;
+    const blink = f.blinkProg >= 0 ? Math.sin(f.blinkProg * Math.PI) : 0;
+    fPosA.set([bx, by, bobY, f.lungeX.x + dizzySway], i * 4);
+    fHeadA.set([f.headX.x + dizzySway * 0.45, f.headY.x, f.headRot.x * 0.085 + dizzySway * 0.02, clamp(f.headSquash.x, -0.58, 0.58)], i * 4);
+    fFaceA.set([f.dentX, f.dentY, f.facePushX.x, f.facePushY.x], i * 4);
+    fTorsoA.set([clamp(f.torsoShear.x, -0.85, 0.85), clamp(f.torsoSquash.x, -0.45, 0.45), clamp(f.bodyDent.x, -0.35, 1.25), f.punchExt], i * 4);
+    fExprA.set([blink, clamp(f.winceTimer * 3.2, 0, 1), clamp(f.dizzyTimer, 0, 1), f.hitFlash], i * 4);
+  }
+  gl.uniform4fv(U.uFPos, fPosA);
+  gl.uniform4fv(U.uFHead, fHeadA);
+  gl.uniform4fv(U.uFFace, fFaceA);
+  gl.uniform4fv(U.uFTorso, fTorsoA);
+  gl.uniform4fv(U.uFExpr, fExprA);
+
+  glovesA.fill(0); gloveMetaA.fill(0);
+  for (let i = 0; i < 4; i++) {
+    const g = punches[i];
+    if (!g.active) continue;
+    let gx, gy, scAlpha, phase;
+    if (g.age < 0.090) {
+      const u = clamp(g.age / 0.090, 0, 1), ease = 1 - Math.pow(1 - u, 3);
+      gx = g.origX + (g.tx - g.origX) * ease;
+      gy = g.origY + (g.ty - g.origY) * ease;
+      scAlpha = g.peakScale * (0.45 + 0.55 * ease);
+      phase = u;
+    } else if (g.age < 0.210) {
+      const u = (g.age - 0.090) / 0.120, over = Math.sin(u * Math.PI) * 11;
+      gx = g.tx + Math.cos(g.dir) * over;
+      gy = g.ty + Math.sin(g.dir) * over;
+      scAlpha = g.peakScale * (1 + 0.18 * Math.sin(u * Math.PI));
+      phase = 1;
+    } else {
+      const u = clamp((g.age - 0.210) / 0.470, 0, 1), back = u * u;
+      gx = g.tx + (g.origX - g.tx) * back * 0.78;
+      gy = g.ty + (g.origY - g.ty) * back * 0.78;
+      scAlpha = g.peakScale * (1 - u);
+      phase = 1.1 + u;
+    }
+    glovesA.set([gx, gy, g.dir, scAlpha], i * 4);
+    const kind = g.zone === 'top' ? 1 : g.zone === 'chin' ? 2 : 0;
+    gloveMetaA.set([g.origX, g.origY, phase, kind], i * 4);
+  }
+  gl.uniform4fv(U.uGloves, glovesA);
+  gl.uniform4fv(U.uGloveMeta, gloveMetaA);
+
+  puffsA.fill(0);
+  for (let i = 0; i < 6; i++) {
+    const pf = puffs[i];
+    if (pf.active) puffsA.set([pf.x, pf.y, pf.age, pf.seed], i * 4);
+  }
+  gl.uniform4fv(U.uPuffs, puffsA);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ---------------- Điều khiển từ host / settings ---------------- */
+function applySettings(v) {
+  let field = false;
+  if (typeof v.seed === 'number' && v.seed !== seed) { seed = v.seed; buildNoiseTex(); buildNoise(); field = true; }
+  for (const k of Object.keys(DEFAULTS)) {
+    if (typeof v[k] !== 'number' || P[k] === v[k]) continue;
+    P[k] = v[k];
+    if (k === 'sigma' || k === 'warp') field = true;
+    if (k === 'bounciness') tuneBounciness();
+    if (k === 'autoSpar') sparCd = Math.round(P.autoSpar) === 2 ? 0.2 : 1.5;
+  }
+  if (field && FB) commit();
+  needDraw = true;
+}
+function drawGhosts() {
+  const box = document.getElementById('ghosts');
+  box.innerHTML = icons.map(ic => `<div class="ghost" style="left:${ic.x}px;top:${ic.y}px;width:${ic.w}px;height:${ic.h}px"><i></i><b></b></div>`).join('');
+}
+cv.addEventListener('pointerdown', e => handleClick(e.clientX, e.clientY));
+addEventListener('resize', resize);
+
+fetch('boxing-ring.frag').then(r => r.text()).then(src => {
+  PR = program(src);
+  buildNoiseTex();
+  const g = document.createElement('div'); g.id = 'ghosts'; document.body.appendChild(g);
+  if (PREVIEW) document.body.classList.add('preview');
+  if (DEMO) {
+    document.body.classList.add('demo');
+    for (let c = 0; c < 2; c++) for (let r = 0; r < 6; r++) icons.push({ x: 8 + c * 78, y: 46 + r * 100, w: 76, h: 96 });
+  }
+  resize();
+  if (DEMO) drawGhosts();
+  let first = true;
+  const handle = m => {
+    if (m.t === 'pause') { paused = !!m.v; return; }
+    if (m.t === 'settings') { applySettings(m.v || {}); return; }
+    if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t !== 'icons') return;
+    const k = window.devicePixelRatio || 1;
+    icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];
+    if (PREVIEW) drawGhosts();
+    commit(first); first = false;
+  };
+  if (PREVIEW) {
+    addEventListener('message', ev => { if (ev.source === parent) handle(typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data); });
+    parent.postMessage(JSON.stringify({ t: 'ready' }), '*');
+  } else if (WALL) {
+    const host = window.chrome && window.chrome.webview;
+    if (host) { host.addEventListener('message', ev => handle(JSON.parse(ev.data))); host.postMessage('ready'); }
+  }
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>

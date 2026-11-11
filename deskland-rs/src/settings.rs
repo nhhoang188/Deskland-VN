@@ -188,6 +188,15 @@ pub static CATS: [ParamDef; 8] = [
     p("bushes", "Cây & lùm cây", 0.0, 10.0, 1.0, 4.0, "cây", Fmt::Num),
     p("wind", "Sức gió", 0.0, 2.0, 0.05, 1.0, "", Fmt::Mul),
 ];
+pub static BOXING_RING: [ParamDef; 7] = [
+    p("bounciness", "Độ nảy biến dạng", 0.4, 2.5, 0.05, 1.25, "", Fmt::Mul),
+    p("punchPower", "Lực đấm & Rung đài", 0.5, 2.5, 0.05, 1.0, "", Fmt::Mul),
+    p("autoSpar", "Chế độ đấu (0-2)", 0.0, 2.0, 1.0, 0.0, "", Fmt::Num),
+    p("gloveStyle", "Kiểu găng (0-2)", 0.0, 2.0, 1.0, 0.0, "", Fmt::Num),
+    p("hudMode", "Thanh máu HUD (0-2)", 0.0, 2.0, 1.0, 0.0, "", Fmt::Num),
+    p("sigma", "Độ rộng thảm icon", 40.0, 160.0, 1.0, 74.0, "px", Fmt::Num),
+    p("warp", "Độ uốn mép thảm", 0.0, 60.0, 1.0, 22.0, "", Fmt::Num),
+];
 const IDLE_CHOICES: [u32; 8] = [1, 2, 3, 5, 10, 15, 30, 60];
 
 fn defs(theme: &str) -> &'static [ParamDef] {
@@ -206,6 +215,7 @@ fn defs(theme: &str) -> &'static [ParamDef] {
         "commute" => &COMMUTE,
         "summer-porch" => &SUMMER_PORCH,
         "cats" => &CATS,
+        "boxing-ring" => &BOXING_RING,
         _ => &BEACH,
     }
 }

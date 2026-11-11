@@ -780,6 +780,60 @@
           "hint": "Stronger wind sways the bushes and blows more drifting and falling leaves; 0 is calm"
         }
       }
+    },
+    "boxing-ring": {
+      "name": "Arcade Boxing Ring",
+      "desc": "A 3/4 retro arcade boxing gym & elevated blue ring where two fighters trade punches with mochi-like Squash & Stretch spring physics, multi-zone flying gloves, puff clouds, dizzy combo stars and dark EVA gym mats wrapping your desktop icons. Click either side to throw head/cheek/chin/body shots, or hit the heavy bags, tire & round clock",
+      "groups": [
+        "Physics & Punches",
+        "HUD & Icon Mats"
+      ],
+      "params": {
+        "bounciness": {
+          "label": "Squash & Stretch bounce",
+          "hint": "Elastic springiness of the fighters' head, cheeks and torso on impact"
+        },
+        "punchPower": {
+          "label": "Punch power & ring shake",
+          "hint": "Knockback toward the ropes, ring vibration and impact puff intensity"
+        },
+        "autoSpar": {
+          "label": "Sparring mode",
+          "hint": "Natural light sparring jabs, wait for mouse clicks only, or nonstop GIF-like flurry",
+          "options": [
+            "Natural Sparring",
+            "Click Only",
+            "Nonstop Combo"
+          ]
+        },
+        "gloveStyle": {
+          "label": "Glove style",
+          "hint": "Flying glove style on click: classic red leather, giant cartoon fist or pink cat paw",
+          "options": [
+            "Classic Red Glove",
+            "Cartoon Giant Fist",
+            "Pink Cat Paw"
+          ]
+        },
+        "hudMode": {
+          "label": "Health bars & round clock",
+          "hint": "Show full size, compact or hide the top arcade health bars and round timer",
+          "options": [
+            "Full HUD",
+            "Compact",
+            "Hidden"
+          ]
+        },
+        "sigma": {
+          "label": "Gym mat width",
+          "hint": "How far the dark EVA gym mat extends around your desktop icons",
+          "unit": "px"
+        },
+        "warp": {
+          "label": "Mat edge curve",
+          "hint": "Straight or organically rounded gym mat borders around icon clusters"
+        }
+      }
     }
   }
 }

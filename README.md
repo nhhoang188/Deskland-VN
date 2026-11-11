@@ -32,17 +32,17 @@ Lưu ý:
 
 ---
 
-## Mới: Phiên bản Rust Native (`deskland-rs`) — Siêu nhẹ, Tương tác Chuột & 14 Chủ đề
+## Mới: Phiên bản Rust Native (`deskland-rs`) — Siêu nhẹ, Tương tác Chuột & 16 Chủ đề
 
 Bên cạnh trình chủ C# + WebView2 ban đầu (`host/`), kho mã nguồn nay bổ sung **phiên bản viết lại hoàn toàn bằng Rust thuần + OpenGL 3.3 (`deskland-rs/`)** với những cải tiến vượt trội cho sử dụng hàng ngày trên Windows 10 & Windows 11 (kể cả **24H2+**):
 
 - **1 tiến trình duy nhất — Giảm ~6–8 lần RAM:** Gộp toàn bộ bộ dựng hình OpenGL 3.3 vào một tệp `deskland-rs.exe` (~2 MB), chỉ tiêu thụ **~65–98 MB RAM** (1 tiến trình) thay vì ~620–790 MB RAM (11 tiến trình WebView2 chạy ngầm liên tục). Khởi động lên hình trong **~0,4 giây**.
-- **Tương tác Click chuột trực tiếp trên màn hình nền & Adaptive FPS (`20 -> 50 FPS`):** Click chuột trái vào khoảng trống trên Desktop để tương tác sống động với từng cảnh (thả mồi gọi cá, quăng cần câu cá vàng/cá hồ, vuốt ve mèo hoặc gãi bụng Corgi, chuyền bóng & sút ghi bàn trên sân vận động, gọi xe buýt chiều, rung cành hoa mận/hoa đào, gọi sao băng ban đêm...). Tự động bỏ qua vùng biểu tượng (icon), nâng lên **50 FPS** mượt mà khi có tương tác và hạ về **20 FPS** tiết kiệm khi nghỉ (có thể bật/tắt ngay trên khay hệ thống hoặc Cài đặt).
-- **Mở rộng lên 14 chủ đề hoàn chỉnh:** Bổ sung thêm các chủ đề tương tác mới là **Sân bóng sôi động (`stadium`)**, **Bể cá vàng (`aquarium`)**, **Chuyến xe chiều (`commute`)** và **Hiên nhà ngày hạ (`summer-porch`)** bên cạnh 10 chủ đề hiện có.
+- **Tương tác Click chuột trực tiếp trên màn hình nền & Adaptive FPS (`20 -> 50 FPS`):** Click chuột trái vào khoảng trống trên Desktop để tương tác sống động với từng cảnh (thả mồi gọi cá, quăng cần câu cá vàng/cá hồ, vuốt ve mèo hoặc gãi bụng Corgi, chuyền bóng & sút ghi bàn trên sân vận động, tung đòn quyền anh Squash & Stretch trên võ đài, gọi xe buýt chiều, rung cành hoa mận/hoa đào, gọi sao băng ban đêm...). Tự động bỏ qua vùng biểu tượng (icon), nâng lên **50 FPS** mượt mà khi có tương tác và hạ về **20 FPS** tiết kiệm khi nghỉ (có thể bật/tắt ngay trên khay hệ thống hoặc Cài đặt).
+- **Mở rộng lên 16 chủ đề hoàn chỉnh:** Bổ sung thêm các chủ đề tương tác mới là **Sân bóng sôi động (`stadium`)**, **Bể cá vàng (`aquarium`)**, **Chuyến xe chiều (`commute`)**, **Hiên nhà ngày hạ (`summer-porch`)**, **Mèo con trên đồi (`cats`)** và **Võ đài quyền anh (`boxing-ring`)** bên cạnh 10 chủ đề hiện có.
 - **Màn hình khóa thật 100% của Windows & `0% CPU` khi nghỉ:** Chuyển sang sử dụng cơ chế khóa chuẩn hệ điều hành (`LockWorkStation()`, trình bảo vệ màn hình cảnh động `.scr` có `ScreenSaverIsSecure=1`, phím tắt `Ctrl+Alt+L`, đồng bộ ảnh nền màn khóa Windows, giữ nguyên `Win+L` gốc của hệ thống) và tự động ngừng vẽ về **`0% CPU`** khi khóa máy hoặc mở ứng dụng toàn màn hình.
 - **Cài đặt On-Demand & Khay hệ thống tinh gọn:** Giao diện Cài đặt `prototype/settings.html` chỉ nạp WebView2 khi mở (đóng là giải phóng sạch RAM, có sẵn giao diện Win32 thuần dự phòng), nhúng sẵn biểu tượng `.exe` đa kích thước sắc nét và menu chuột phải khay hệ thống gọn nhẹ chỉ hiển thị chủ đề đang chọn.
 
-👉 Xem tài liệu chi tiết về kiến trúc, bảng tương tác của cả 14 chủ đề và tham số dòng lệnh tại **[deskland-rs/README.md](deskland-rs/README.md)**.
+👉 Xem tài liệu chi tiết về kiến trúc, bảng tương tác của cả 16 chủ đề và tham số dòng lệnh tại **[deskland-rs/README.md](deskland-rs/README.md)**.
 
 ---
 
@@ -50,7 +50,7 @@ Bên cạnh trình chủ C# + WebView2 ban đầu (`host/`), kho mã nguồn nay
 
 Theo Mục 5a của giấy phép GNU GPL v3.0, bản sửa đổi này bao gồm các thay đổi sau so với bản gốc:
 
-1. **14 chủ đề hoàn chỉnh (loại bỏ toàn bộ các thẻ chủ đề khóa/phải mua):**
+1. **16 chủ đề hoàn chỉnh (loại bỏ toàn bộ các thẻ chủ đề khóa/phải mua):**
    - **Thảo nguyên (`meadow`):** Mây trôi và bóng mây trên đồng cỏ uốn quanh biểu tượng; click tạo cụm mây puff bay lên bầu trời.
    - **Bãi biển (`beach` / `flat.html`):** Sóng biển ngọc lam, thuyền kayak và hải âu; click tạo gợn nước và gọi kayak/hải âu.
    - **Đảo Maldives (`beach-turquoise` / `maldives.html`):** Biển ngọc bích trong vắt, rạn san hô, đàn cá nhiệt đới và rùa biển; click thả mồi thu hút cá & rùa.
@@ -65,6 +65,8 @@ Theo Mục 5a của giấy phép GNU GPL v3.0, bản sửa đổi này bao gồm
    - **Bể cá vàng (`aquarium` — Mới):** Góc nhìn ngang qua bể kính ngập nắng với rạn cát vàng ôm biểu tượng, rong rêu, bọt khí và đàn cá vàng; click vùng nước thả câu cá vàng hoặc click rạn cát tung bụi cát.
    - **Chuyến xe chiều (`commute` — Mới):** Phong cảnh hoạt hình ven sông, trời đổi màu theo giờ trên máy (ngày / hoàng hôn / đêm), phố lên đèn, cầu vòm, xe buýt vàng chạy qua đồng lau; click vào đường để gọi xe dừng, lên trời để có đàn chim hoặc sao băng, vào cỏ để gió thổi rạp lau.
    - **Hiên nhà ngày hạ (`summer-porch` — Mới):** Hiên gỗ màu nước kiểu Ghibli với mái ngói âm dương, đàn Corgi mập ngủ trưa lăn mình trước quạt bàn cổ điển, bên đĩa dưa hấu đỏ, sách mở và chuông gió đồng; luống vườn xanh nở hoa vàng ôm quanh biểu tượng. Click vào Corgi để gãi bụng, click quạt bàn đổi tốc độ gió, gõ chuông gió hoặc cắn dưa hấu.
+   - **Mèo con trên đồi (`cats` — Mới):** Ngọn đồi xanh dưới trời mây trắng cùng đàn mèo mập đi dạo, liếm lông và ngủ thở phập phồng; click vuốt ve mèo, rung cây rụng lá hoặc thả cuộn len cho mèo vờn.
+   - **Võ đài quyền anh (`boxing-ring` — Mới):** Phòng tập & võ đài quyền anh Arcade góc nhìn 3/4 với hai võ sĩ đối kháng kết hợp lò xo giảm chấn Squash & Stretch, phóng găng đa vùng, khói tròn puff, sao choáng `@ @`, thanh máu HUD và thảm tập ôm biểu tượng; click để tung đòn theo vùng đầu/má/cằm/bụng hoặc đập bao cát, lốp xe & đồng hồ hiệp.
 2. **Phiên bản Rust Native (`deskland-rs`):** Bổ sung bản thực thi gốc Rust + OpenGL 3.3 siêu nhẹ (1 tiến trình, giảm ~6–8 lần RAM, hỗ trợ tương tác chuột Desktop, Adaptive FPS `20 -> 50 FPS`, biểu tượng `.exe` riêng, menu khay tinh gọn và khóa thật của Windows).
 3. **Hỗ trợ đa màn hình (Multi-Monitor & Per-Monitor DPI):** Tự động nhận diện và hiển thị hình nền sắc nét trên tất cả các màn hình đang kết nối.
 4. **Tối ưu hiệu năng GPU:** Giảm tải độ phân giải nội suy (`scale = 0.72`), kết xuất PBO bất đồng bộ và tự động ngừng vẽ khi màn hình nền bị che khuất hoặc khóa máy.
@@ -86,7 +88,7 @@ Theo Mục 5a của giấy phép GNU GPL v3.0, bản sửa đổi này bao gồm
 
 ## Biên dịch từ mã nguồn
 
-### Cách 1: Bản Rust Native (`deskland-rs` — Khuyên dùng, nhẹ & đầy đủ 14 chủ đề tương tác)
+### Cách 1: Bản Rust Native (`deskland-rs` — Khuyên dùng, nhẹ & đầy đủ 16 chủ đề tương tác)
 
 ```powershell
 cd deskland-rs
@@ -121,7 +123,7 @@ Mở **http://localhost:5178/settings.html** trên trình duyệt. Chế độ t
 
 | Đường dẫn | Nội dung |
 | --- | --- |
-| `deskland-rs/` | **Mã nguồn bản Rust Native** (Win32 + OpenGL 3.3, 14 chủ đề tương tác, Cài đặt WebView2/Win32, khóa Windows, icon `.ico`) |
+| `deskland-rs/` | **Mã nguồn bản Rust Native** (Win32 + OpenGL 3.3, 16 chủ đề tương tác, Cài đặt WebView2/Win32, khóa Windows, icon `.ico`) |
 | `host/` | Mã nguồn C# của trình chủ Windows (`DesktopHost.cs`, `Themes.cs`), kịch bản biên dịch và manifest |
 | `prototype/meadow.html` | Chủ đề Thảo nguyên |
 | `prototype/flat.html` | Chủ đề Bãi biển |
@@ -137,8 +139,10 @@ Mở **http://localhost:5178/settings.html** trên trình duyệt. Chế độ t
 | `prototype/aquarium.html` & `aquarium.frag` | Chủ đề Bể cá vàng & shader dùng chung *(Mới)* |
 | `prototype/commute.html` & `commute.frag` | Chủ đề Chuyến xe chiều & shader dùng chung *(Mới)* |
 | `prototype/summer-porch.html` & `summer-porch.frag` | Chủ đề Hiên nhà ngày hạ & shader dùng chung *(Mới)* |
+| `prototype/cats.html` & `cats-*.js` | Chủ đề Mèo con trên đồi *(Mới)* |
+| `prototype/boxing-ring.html` & `boxing-ring.frag` | Chủ đề Võ đài quyền anh & shader dùng chung *(Mới)* |
 | `prototype/settings.html` | Giao diện Cài đặt chung (dùng cho cả bản Rust, bản C# và xem trước trình duyệt) |
-| `prototype/themes.json` | Cấu hình tham số và nhóm tùy chỉnh của cả 14 chủ đề |
+| `prototype/themes.json` | Cấu hình tham số và nhóm tùy chỉnh của cả 16 chủ đề |
 | `prototype/i18n/` | Các tệp ngôn ngữ Tiếng Việt (`vi.json`) và Tiếng Anh (`en.json`) |
 | `prototype/share.js` | Công cụ xuất ảnh tĩnh và ảnh động bảo vệ quyền riêng tư (bản Web/C#) |
 | `tools/` | Công cụ đo hiệu năng (`measure-ram.ps1`) và đóng gói bộ cài đặt NSIS |
@@ -164,8 +168,8 @@ This repository is a community-modified Vietnamese & English edition of **[Deskl
   - **Interactive Desktop Clicks + Adaptive FPS (`20 -> 50 FPS`):** Non-intrusive Raw Input mouse click interactions on empty desktop space (ignoring desktop icons and app windows) with per-theme physics & animations, automatically boosting frame rate to 50 FPS during interactions and returning to 20 FPS when idle.
   - **100% Native Windows Lock Screen Security & `0% CPU` Idle Pause:** Uses real `LockWorkStation()`, secure `.scr` live screensaver (`ScreenSaverIsSecure=1`), `Ctrl+Alt+L` hotkey, and Windows Lock Screen wallpaper sync without keyboard hooks or `Win+L` interception; pauses rendering to `0% CPU` when locked or occluded.
   - **On-Demand Settings UI & Polished Tray UX:** Loads `prototype/settings.html` in WebView2 only while Settings is open (with a built-in native Win32 fallback window), ships a custom multi-size squircle `.exe` icon, and features a clean, compact System Tray menu showing the active theme.
-- **14 complete open-source themes (removed all locked/paid preview cards):**
-  - Original **Meadow** (`meadow`) & **Beach** (`beach`), plus **Maldives** (`beach-turquoise`), **Lake** (`lake`), **Sky** (`sky`), **Ocean** (`ocean`), **Rainforest** (`rainforest`), **Moc Chau Plum Blossoms** (`mocchau`), **Tet Peach Blossoms** (`tet-sakura`), **Sunny Cat Hill** (`cat-hill`), and new interactive themes: **Lively Football Stadium** (`stadium`), **Sunlit Goldfish Bowl** (`aquarium`), **Evening Bus** (`commute`), and **Summer Porch** (`summer-porch`).
+- **16 complete open-source themes (removed all locked/paid preview cards):**
+  - Original **Meadow** (`meadow`) & **Beach** (`beach`), plus **Maldives** (`beach-turquoise`), **Lake** (`lake`), **Sky** (`sky`), **Ocean** (`ocean`), **Rainforest** (`rainforest`), **Moc Chau Plum Blossoms** (`mocchau`), **Tet Peach Blossoms** (`tet-sakura`), **Sunny Cat Hill** (`cat-hill`), and new interactive themes: **Lively Football Stadium** (`stadium`), **Sunlit Goldfish Bowl** (`aquarium`), **Evening Bus** (`commute`), **Summer Porch** (`summer-porch`), **Hillside Kittens** (`cats`), and **Arcade Boxing Ring** (`boxing-ring`).
 - **Multi-monitor & Per-Monitor DPI V2 support** across all connected displays.
 - **Vietnamese (`vi`) & English (`en`) UI localization.**
 

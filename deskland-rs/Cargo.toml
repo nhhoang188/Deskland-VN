@@ -1,6 +1,6 @@
 [package]
 name = "deskland-rs"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 license = "GPL-3.0-only"
 description = "Deskland native (Rust + OpenGL) - hình nền động tương tác thích ứng 12 chủ đề cho Windows"

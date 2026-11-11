@@ -1375,6 +1375,99 @@
           ]
         }
       ]
+    },
+    {
+      "id": "boxing-ring",
+      "name": "Võ đài quyền anh",
+      "desc": "Phòng tập & võ đài quyền anh Arcade góc nhìn 3/4 với hai võ sĩ đối kháng kết hợp vật lý biến dạng đàn hồi Squash & Stretch, phóng găng đa vùng, khói tròn puff, sao choáng combo và thảm tập tối màu ôm gọn biểu tượng Desktop. Click võ sĩ để tung đòn theo vùng đầu/má/cằm/bụng, hoặc gõ bao cát, lốp xe & đồng hồ hiệp đấu",
+      "page": "boxing-ring.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/boxing-ring.jpg) center / cover no-repeat, linear-gradient(180deg, #272329 0%, #363036 52%, #233968 58%, #1d2a4a 84%, #1f1c24 100%)",
+      "groups": [
+        {
+          "name": "Vật lý & Đòn đánh",
+          "params": [
+            {
+              "key": "bounciness",
+              "label": "Độ nảy biến dạng",
+              "hint": "Độ dẻo đàn hồi Squash & Stretch kiểu bánh mochi của đầu, má và thân võ sĩ khi dính đòn",
+              "min": 0.4,
+              "max": 2.5,
+              "step": 0.05,
+              "default": 1.25,
+              "format": "times"
+            },
+            {
+              "key": "punchPower",
+              "label": "Lực đấm & Rung đài",
+              "hint": "Lực đẩy lùi võ sĩ về dây thừng, độ rung sàn bạt và độ bung khói puff khi va chạm",
+              "min": 0.5,
+              "max": 2.5,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            },
+            {
+              "key": "autoSpar",
+              "label": "Chế độ giao đấu",
+              "hint": "Hai võ sĩ tự tung đòn thăm dò nhịp nhàng, đứng thủ thế chờ bạn click, hoặc đôi công liên hoàn",
+              "options": [
+                "Đấu nhịp tự nhiên",
+                "Chỉ đấm khi Click",
+                "Liên hoàn như GIF"
+              ],
+              "default": 0
+            },
+            {
+              "key": "gloveStyle",
+              "label": "Kiểu găng đấm",
+              "hint": "Đổi kiểu găng phóng vào khi click: găng đỏ cổ điển, siêu nắm đấm hoạt hình hoặc găng chân mèo",
+              "options": [
+                "Găng Đỏ Cổ Điển",
+                "Siêu Găng Hoạt Hình",
+                "Găng Mèo Đệm Thịt"
+              ],
+              "default": 0
+            }
+          ]
+        },
+        {
+          "name": "Giao diện & Thảm icon",
+          "params": [
+            {
+              "key": "hudMode",
+              "label": "Thanh máu & Đồng hồ",
+              "hint": "Hiện đầy đủ, thu gọn hoặc ẩn thanh máu đối kháng & đồng hồ hiệp đấu Arcade ở cạnh trên",
+              "options": [
+                "Hiện đầy đủ",
+                "Thu gọn",
+                "Ẩn"
+              ],
+              "default": 0
+            },
+            {
+              "key": "sigma",
+              "label": "Độ rộng thảm icon",
+              "hint": "Độ rộng thảm cao su EVA tối màu tự động trải ôm quanh các biểu tượng Desktop",
+              "min": 40,
+              "max": 160,
+              "step": 1,
+              "default": 74,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "Độ uốn mép thảm",
+              "hint": "Độ bo uốn tự nhiên của đường viền thảm tập quanh nhóm biểu tượng",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 22
+            }
+          ]
+        }
+      ]
     }
   ]
 }
