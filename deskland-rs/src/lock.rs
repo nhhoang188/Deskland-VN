@@ -196,6 +196,24 @@ pub fn sync_lock_image(bmp: &std::path::Path) {
     }
 }
 
+/// Đặt ảnh BMP làm hình nền tĩnh của Windows (kiểu Fill, chạy ở luồng riêng vì SPIF_SENDCHANGE phát
+/// thông điệp đồng bộ). Lúc mở máy, trước khi app kịp chạy, desktop hiện đúng cảnh này thay vì màn đen.
+pub fn set_static_wallpaper(bmp: std::path::PathBuf) {
+    std::thread::spawn(move || {
+        reg_set_string(HKEY_CURRENT_USER, DESKTOP_KEY, "WallpaperStyle", "10");
+        reg_set_string(HKEY_CURRENT_USER, DESKTOP_KEY, "TileWallpaper", "0");
+        let mut w = wide(&bmp.to_string_lossy());
+        let ok = unsafe {
+            SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, w.as_mut_ptr().cast(), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)
+        };
+        if ok != 0 {
+            crate::log!("Đã đặt hình nền tĩnh Windows từ cảnh hiện tại: {}", bmp.display());
+        } else {
+            crate::log!("Đặt hình nền tĩnh Windows thất bại");
+        }
+    });
+}
+
 pub(crate) fn reg_delete_value(root: HKEY, key: &str, name: &str) -> bool {
     let (k, n) = (wide(key), wide(name));
     let r = unsafe { RegDeleteKeyValueW(root, k.as_ptr(), n.as_ptr()) };

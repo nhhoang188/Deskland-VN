@@ -1067,6 +1067,19 @@ impl App {
         }
     }
 
+    /// Chụp cảnh màn hình chính làm hình nền tĩnh của Windows, để lúc mở máy (trước khi app chạy)
+    /// desktop hiện đúng cảnh này thay vì màn đen.
+    fn sync_static_wallpaper(&self) {
+        if self.walls.is_empty() {
+            return;
+        }
+        let path = lock::data_dir().join("wallpaper.bmp");
+        match std::fs::write(&path, self.read_bmp(0)) {
+            Ok(_) => lock::set_static_wallpaper(path),
+            Err(e) => log!("Lưu ảnh hình nền tĩnh lỗi: {e}"),
+        }
+    }
+
     fn fix_z_order(&self) {
         for wp in &self.walls {
             if let Some(a) = &wp.attach {
@@ -1341,7 +1354,8 @@ fn main() {
         SAVER_START.with(|c| c.set(Some(Instant::now())));
     }
     // Đồng bộ ảnh màn khóa Windows vài giây sau khi cảnh đã ổn định
-    let mut lock_sync_at = (lock_sync && !saver).then(|| app.now() + 6_000.0);
+    // và hình nền tĩnh của Windows (luôn bật: tránh màn đen lúc mở máy trước khi app kịp chạy)
+    let mut lock_sync_at = (!saver).then(|| app.now() + 6_000.0);
     let mut saver_check_at: Option<f64> = None;
     let mut rebuild_at: Option<f64> = None;
     let mut web_changed = false;
@@ -1658,11 +1672,12 @@ fn main() {
                 lock::lock_now();
             }
         }
-        if matches!(PENDING_THEME_SYNC.with(|c| c.replace(false)), true) && LOCK_SYNC.with(|c| c.get()) && !saver {
+        if matches!(PENDING_THEME_SYNC.with(|c| c.replace(false)), true) && !saver {
             lock_sync_at = Some(app.now() + 3_000.0);
         }
         if lock_sync_at.is_some_and(|t| app.now() >= t) {
             lock_sync_at = None;
+            app.sync_static_wallpaper();
             if LOCK_SYNC.with(|c| c.get()) {
                 app.sync_lock_image();
             }
