@@ -734,51 +734,6 @@
           "hint": "Neatly trimmed garden borders or organic hand-drawn curves"
         }
       }
-    },
-    "gymo-boxing": {
-      "name": "Chibi Stress Boxing",
-      "desc": "A cheerful smiling Chibi character at her desk — click any body part to throw cartoon boxing punches with hilarious GIF-style squash-and-stretch jelly physics",
-      "groups": [
-        "Punch & Elasticity",
-        "Backdrop & Auto Loop"
-      ],
-      "params": {
-        "bounciness": {
-          "label": "Jelly bounciness",
-          "hint": "Mochi-like squash-and-stretch elasticity of the head, cheeks, and glasses on impact"
-        },
-        "punchPower": {
-          "label": "Punch power",
-          "hint": "Impact force, comic puff cloud burst size, and watermelon mug desk bounce"
-        },
-        "gloveStyle": {
-          "label": "Glove style",
-          "hint": "Switch between classic red boxing gloves, purple-sleeved cartoon fist, or cute cat-paw mitts",
-          "options": [
-            "Red Boxing Glove",
-            "Cartoon Fist (GIF)",
-            "Cat-Paw Mitt"
-          ]
-        },
-        "backdrop": {
-          "label": "Studio backdrop",
-          "hint": "Choose cozy frosted-glass office, flat purple comic puff backdrop, or night boxing ring",
-          "options": [
-            "Cozy Office",
-            "Purple Comic (GIF)",
-            "Boxing Ring"
-          ]
-        },
-        "autoPunch": {
-          "label": "Auto-punch loop (GIF)",
-          "hint": "Off by default (click only), or enable continuous hands-free GIF pounding",
-          "options": [
-            "Off (Click Only)",
-            "Gentle Rhythm",
-            "Rapid GIF Loop"
-          ]
-        }
-      }
     }
   }
 }

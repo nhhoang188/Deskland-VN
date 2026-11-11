@@ -177,13 +177,6 @@ pub static SUMMER_PORCH: [ParamDef; 6] = [
     p("sigma", "Độ rộng luống vườn", 45.0, 140.0, 1.0, 78.0, "px", Fmt::Num),
     p("warp", "Độ uốn bờ vườn", 0.0, 70.0, 1.0, 28.0, "", Fmt::Num),
 ];
-pub static GYMO_BOXING: [ParamDef; 5] = [
-    p("bounciness", "Độ nảy biến dạng", 0.4, 2.5, 0.05, 1.2, "", Fmt::Mul),
-    p("punchPower", "Lực đấm Boxing", 0.5, 2.5, 0.05, 1.0, "", Fmt::Mul),
-    p("gloveStyle", "Kiểu găng tay (0-2)", 0.0, 2.0, 1.0, 0.0, "", Fmt::Num),
-    p("backdrop", "Phối cảnh nền (0-2)", 0.0, 2.0, 1.0, 0.0, "", Fmt::Num),
-    p("autoPunch", "Tự động đấm (0-2)", 0.0, 2.0, 1.0, 0.0, "", Fmt::Num),
-];
 const IDLE_CHOICES: [u32; 8] = [1, 2, 3, 5, 10, 15, 30, 60];
 
 fn defs(theme: &str) -> &'static [ParamDef] {
@@ -201,7 +194,6 @@ fn defs(theme: &str) -> &'static [ParamDef] {
         "aquarium" => &AQUARIUM,
         "commute" => &COMMUTE,
         "summer-porch" => &SUMMER_PORCH,
-        "gymo-boxing" => &GYMO_BOXING,
         _ => &BEACH,
     }
 }

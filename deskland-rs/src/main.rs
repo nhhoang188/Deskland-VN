@@ -14,7 +14,6 @@ mod themes {
     pub mod beach;
     pub mod cat_hill;
     pub mod commute;
-    pub mod gymo_boxing;
     pub mod lake;
     pub mod maldives;
     pub mod meadow;
@@ -101,7 +100,6 @@ pub const THEMES: &[(&str, &str, usize)] = &[
     ("aquarium", "Bể cá vàng", 113),
     ("commute", "Chuyến xe chiều", 114),
     ("summer-porch", "Hiên nhà ngày hạ", 115),
-    ("gymo-boxing", "Boxing xả stress", 112),
 ];
 
 pub fn canonical_theme(id: &str) -> Option<&'static str> {
@@ -114,7 +112,6 @@ pub fn canonical_theme(id: &str) -> Option<&'static str> {
         "fish" | "fishing" | "goldfish" | "fishbowl" => Some("aquarium"),
         "bus" | "evening-bus" | "commute-bus" => Some("commute"),
         "porch" | "corgi" | "corgi-porch" | "veranda" | "summer_porch" => Some("summer-porch"),
-        "boxing" | "punch" | "stress" | "gymo_boxing" => Some("gymo-boxing"),
         other => THEMES.iter().find(|&&(tid, _, _)| tid == other).map(|&(tid, _, _)| tid),
     }
 }
@@ -476,8 +473,7 @@ fn web_init(app: &App) -> serde_json::Value {
                 "stadium",
                 "aquarium",
                 "commute",
-                "summer-porch",
-                "gymo-boxing"
+                "summer-porch"
             ],
             // Chưa port: cây dừa, cậu bé, mèo -> ẩn thanh trượt, xem trước cũng tắt cho giống desktop
             "hide": ["palms", "showBoy", "showCat"],
@@ -633,7 +629,6 @@ impl App {
             "commute" => Box::new(themes::commute::Commute::new(gl, w, h, buf_w, buf_h, scale, seed, themes::commute::Params::from_json(p), rs, now)),
             "aquarium" => Box::new(themes::aquarium::Aquarium::new(gl, w, h, buf_w, buf_h, scale, seed, themes::aquarium::Params::from_json(p), rs, now)),
             "summer-porch" => Box::new(themes::summer_porch::SummerPorch::new(gl, w, h, buf_w, buf_h, scale, seed, themes::summer_porch::Params::from_json(p), rs, now)),
-            "gymo-boxing" => Box::new(themes::gymo_boxing::GymoBoxing::new(gl, w, h, buf_w, buf_h, scale, seed, themes::gymo_boxing::Params::from_json(p), rs, now)),
             _ => Box::new(themes::beach::Beach::new(gl, w, h, buf_w, buf_h, scale, seed, themes::beach::Params::from_json(p), rs, now)),
         }
     }
@@ -657,7 +652,6 @@ impl App {
             "aquarium" => themes::aquarium::FRAG,
             "commute" => themes::commute::FRAG,
             "summer-porch" => themes::summer_porch::FRAG,
-            "gymo-boxing" => themes::gymo_boxing::FRAG,
             _ => themes::beach::FRAG,
         };
         let t0 = Instant::now();
