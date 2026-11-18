@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deskland · Cung đường sa mạc</title>
+<!--
+  Deskland · Chủ đề Cung đường sa mạc (Desert Highway / Outrun Drive; WebGL2 2D)
+  - Cao tốc sa mạc viễn tây trải dài bất tận đến chân trời, khối núi sa thạch Monument Valley
+  - Xe thể thao cổ điển 80s đuôi bẹt, đèn hậu ngang, vạch kẻ đường trôi theo phối cảnh 1 điểm tụ
+  - Đổi cảnh theo giờ (Trưa nắng / Hoàng hôn / Đêm sao)
+  - Tương tác click: chuyển làn trái/phải, tăng tốc Nitro phụt lửa ống xả, đổi giờ, thả cỏ lăn
+  Shader dùng chung với bản Rust: desert-drive.frag
+-->
+<style>
+  :root { --taskbar: 48px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #281a1c; }
+  #art { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
+  #ghosts { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.preview #ghosts, body.demo #ghosts { display: block; }
+  .ghost { position: absolute; }
+  .ghost i { position: absolute; left: 50%; top: 4px; width: 48px; height: 48px; margin-left: -24px; border-radius: 9px;
+    background: rgba(255,255,255,.88); box-shadow: 3px 6px 8px rgba(32,18,12,.35); }
+  .ghost b { position: absolute; left: 14%; right: 14%; top: 60px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.8); }
+  #hud { position: fixed; right: 14px; top: 14px; color: #fffdf5; font: 600 13px "Segoe UI", system-ui, sans-serif;
+    background: rgba(45,24,18,.55); padding: 6px 14px; border-radius: 999px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; display: none; }
+  body.demo #hud { display: block; }
+</style>
+</head>
+<body>
+<canvas id="art"></canvas>
+<div id="hud">🏎️ Chạm mặt đường để chuyển làn · Chạm xe bật Nitro · Chạm bãi cát thả cỏ lăn · Chạm trời đổi buổi</div>
+<script>
+'use strict';
+const TASKBAR = 48, STEP = 5, MORPH_MS = 1800;
+const QS = new URLSearchParams(location.search);
+const WALL = QS.has('wallpaper'), PREVIEW = QS.has('preview'), DEMO = !WALL && !PREVIEW;
+
+// Giá trị mặc định khớp themes.json & desert_drive.rs
+const DEFAULTS = { timeOfDay: 0, speed: 1.0, carColor: 0, traffic: 0.6, cloudSpeed: 1.0, sigma: 75, warp: 26 };
+const P = Object.assign({}, DEFAULTS);
+
+/* ---------------- Nhiễu CPU + texture nhiễu ---------------- */
+let seed = (Math.random() * 1e6) | 0;
+function hash2(x, y, k = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed + k, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x, y, k = 0) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy, k), b = hash2(ix + 1, iy, k), c = hash2(ix, iy + 1, k), d = hash2(ix + 1, iy + 1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function fbm(x, y, k = 0) {
+  let a = 0.5, s = 0;
+  for (let i = 0; i < 4; i++) { s += a * vnoise(x, y, k + i * 7); x = x * 2.03 + 17.1; y = y * 2.03 + 17.1; a *= 0.5; }
+  return s;
+}
+function tileNoise(x, y, px, py, k) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const m = (v, p) => ((v % p) + p) % p;
+  const x0 = m(ix, px), x1 = m(ix + 1, px), y0 = m(iy, py), y1 = m(iy + 1, py);
+  const a = hash2(x0, y0, k), b = hash2(x1, y0, k), c = hash2(x0, y1, k), d = hash2(x1, y1, k);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+function tileFbm(u, v, periods, k) {
+  let s = 0, w = 0.5, tw = 0;
+  for (let i = 0; i < periods.length; i++) { s += w * tileNoise(u * periods[i], v * periods[i], periods[i], periods[i], k + i * 13); tw += w; w *= 0.5; }
+  return s / tw;
+}
+function makeNoiseImage() {
+  const S = 256, d = new Uint8Array(S * S * 4);
+  const chans = [[8, 16, 32, 64], [8, 16, 32, 64], [8, 16, 32], [16, 32, 64, 128]];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = x / S, v = y / S, i = (y * S + x) * 4;
+    for (let c = 0; c < 4; c++) d[i + c] = Math.min(Math.max((tileFbm(u, v, chans[c], 100 + c * 50) - 0.5) * 1.9 + 0.5, 0), 1) * 255;
+  }
+  return { S, d };
+}
+
+/* ---------------- Trường khoảng cách quanh biểu tượng (Thềm sa thạch) ---------------- */
+let W = innerWidth, H = innerHeight, Gw = 1, Gh = 1, NZ = null;
+function buildNoise() {
+  const N = Gw * Gh;
+  NZ = { wx: new Float32Array(N), wy: new Float32Array(N) };
+  for (let gy = 0; gy < Gh; gy++) for (let gx = 0; gx < Gw; gx++) {
+    const i = gy * Gw + gx, x = gx * STEP, y = gy * STEP;
+    NZ.wx[i] = fbm(x * 0.0028, y * 0.0028, 1) - 0.47;
+    NZ.wy[i] = fbm(x * 0.0028, y * 0.0028, 2) - 0.47;
+  }
+}
+function computeField(rects) {
+  const N = Gw * Gh, f1 = new Float32Array(N);
+  const sig = P.sigma, is1 = 1 / (sig * sig), wa = P.warp * 2.2, wmax = wa * 0.5;
+  for (const r of rects) {
+    const R = 5.5 * sig + Math.max(r.hw, r.hh) * 0.5 + wmax;
+    const gx0 = Math.max(0, Math.floor((r.cx - R) / STEP)), gx1 = Math.min(Gw - 1, Math.ceil((r.cx + R) / STEP));
+    const gy0 = Math.max(0, Math.floor((r.cy - R) / STEP)), gy1 = Math.min(Gh - 1, Math.ceil((r.cy + R) / STEP));
+    const chw = r.hw * 0.5, chh = r.hh * 0.5;
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const i = gy * Gw + gx;
+      const qx = gx * STEP + NZ.wx[i] * wa, qy = gy * STEP + NZ.wy[i] * wa;
+      let dx = Math.abs(qx - r.cx) - chw, dy = Math.abs(qy - r.cy) - chh;
+      if (dx < 0) dx = 0; if (dy < 0) dy = 0;
+      f1[i] += Math.exp(-(dx * dx + dy * dy) * is1);
+    }
+  }
+  const c0 = Math.sqrt(-Math.log(0.35)), s = new Float32Array(N), fMin = Math.exp(-30);
+  for (let i = 0; i < N; i++) {
+    const g = Math.log(Math.max(f1[i], fMin));
+    s[i] = sig * (Math.sqrt(Math.max(-g, 0)) - c0) - sig * 0.6 * Math.max(g, 0);
+  }
+  return s;
+}
+
+/* ---------------- WebGL2 Setup & Shaders ---------------- */
+const cv = document.getElementById('art');
+const gl = cv.getContext('webgl2', { alpha: false, depth: false, antialias: false, powerPreference: 'low-power' });
+if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:20px">WebGL2 không được hỗ trợ</p>'; throw new Error('WebGL2'); }
+
+const QUAD = new Float32Array([-1, -1, 3, -1, -1, 3]);
+const vb = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+gl.bufferData(gl.ARRAY_BUFFER, QUAD, gl.STATIC_DRAW);
+
+function createShader(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    const err = gl.getShaderInfoLog(sh);
+    gl.deleteShader(sh);
+    throw new Error(err);
+  }
+  return sh;
+}
+
+function program(fragSrc) {
+  const vsSrc = `#version 300 es
+in vec2 aPos;
+void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
+  const vs = createShader(gl.VERTEX_SHADER, vsSrc);
+  const fs = createShader(gl.FRAGMENT_SHADER, fragSrc);
+  const p = gl.createProgram();
+  gl.attachShader(p, vs); gl.attachShader(p, fs);
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  gl.deleteShader(vs); gl.deleteShader(fs);
+
+  const U = {};
+  for (const name of [
+    'uNoise', 'uFA', 'uFB', 'uRes', 'uGrid', 'uScale', 'uSeed', 'uStep', 'uMix', 'uTime', 'uDebug',
+    'uScene', 'uCar', 'uEffects', 'uDrive', 'uProps'
+  ]) {
+    U[name] = gl.getUniformLocation(p, name);
+  }
+  const aPos = gl.getAttribLocation(p, 'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  return { p, U };
+}
+
+let PR = null, noiseTex = null;
+const ftex = [null, null];
+let FA = null, FB = null, curMix = 1, morphT0 = 0, morphDur = MORPH_MS, fromI = 0, toI = 1;
+
+function buildNoiseTex() {
+  if (noiseTex) gl.deleteTexture(noiseTex);
+  const { S, d } = makeNoiseImage();
+  noiseTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, S, S, 0, gl.RGBA, gl.UNSIGNED_BYTE, d);
+}
+
+function uploadFieldTex(slot, data) {
+  if (ftex[slot]) gl.deleteTexture(ftex[slot]);
+  ftex[slot] = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, ftex[slot]);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, Gw, Gh, 0, gl.RED, gl.FLOAT, data);
+}
+
+let icons = [];
+function commit(immediate = false) {
+  const rects = icons.map(ic => ({ cx: ic.x + ic.w * 0.5, cy: ic.y + ic.h * 0.5, hw: ic.w, hh: ic.h }));
+  const nextField = computeField(rects);
+  if (immediate || !FB) {
+    FA = nextField; FB = nextField;
+    uploadFieldTex(0, FA); uploadFieldTex(1, FB);
+    fromI = 0; toI = 1; curMix = 1; morphT0 = performance.now() - morphDur;
+  } else {
+    fromI = toI; toI = 1 - toI;
+    FA = FB; FB = nextField;
+    uploadFieldTex(toI, FB);
+    morphT0 = performance.now();
+    curMix = 0;
+  }
+}
+
+/* ---------------- Trạng thái mô phỏng Xe thể thao & Cảnh vật ---------------- */
+// Giữ khớp với deskland-rs/src/themes/desert_drive.rs
+let carLane = 0.0, carLaneTarget = 0.0, laneVel = 0.0;
+let steerTilt = 0.0, bobY = 0.0;
+let boost = 0.0, flameLength = 0.0;
+let signalL = 0.0, signalR = 0.0;
+let shake = 0.0, shakeOff = 0.0;
+let userActiveTimer = 0.0;
+let dist = 0.0, frameBlur = 0.0, elapsed = 0.0, cloudDrift = 0.0;
+const WRAP = 660.0, BASE_SPEED = 1.1;
+const props = [0, 1, 2, 3].map(() => ({ x: 0, y: 0, rot: 0, scale: 0 }));
+
+function resolveTod() {
+  if (P.timeOfDay === 1) return 0.50; // Trưa nắng
+  if (P.timeOfDay === 2) return 0.72; // Hoàng hôn (như ảnh gốc)
+  if (P.timeOfDay === 3) return 0.95; // Đêm sao
+  const now = new Date();
+  const hrs = now.getHours() + now.getMinutes() / 60.0;
+  if (hrs >= 10.0 && hrs < 16.5) return 0.50;
+  if (hrs >= 16.5 && hrs < 18.75) return 0.72;
+  if (hrs >= 5.5 && hrs < 10.0) return 0.25;
+  return 0.95;
+}
+
+function sceneMetrics() {
+  const availH = Math.max(280, H - 48);
+  const s = Math.min(W / 1280, availH / 720);
+  const hz = availH * 0.47, D0 = availH - hz;
+  return { availH, s, hz, D0, G: 340 * s / D0 };
+}
+
+function spawnTumbleweed(x, y) {
+  const { hz, D0 } = sceneMetrics();
+  const tw = props.find(t => t.scale < 0.05);
+  if (!tw) return;
+  tw.x = x; tw.y = Math.max(y, hz + D0 * 0.12);
+  tw.rot = Math.random() * 6.28;
+  tw.scale = (0.45 + 0.9 * (tw.y - hz) / D0) * (0.85 + Math.random() * 0.3);
+}
+
+function handleClick(x, y) {
+  const { s, hz, D0, G } = sceneMetrics();
+  userActiveTimer = 2.5;
+  // 1. Bầu trời -> đổi buổi
+  if (y < hz) { P.timeOfDay = (P.timeOfDay + 1) % 4; return; }
+  // 2. Xe -> Nitro
+  const carDy = 0.56 * D0;
+  const carX = W * 0.5 + carLane * 0.55 * carDy * G, carY = hz + carDy;
+  if (Math.abs(x - carX) < 105 * s && y > carY - 140 * s && y < carY + 12 * s) {
+    boost = 1.0; flameLength = 1.0; shake = 2.5; return;
+  }
+  // 3. Mặt đường -> chuyển làn
+  const roadHalf = (y - hz) * G;
+  if (Math.abs(x - W * 0.5) < roadHalf * 1.1) {
+    if (x < carX) { carLaneTarget = Math.max(carLaneTarget - 0.65, -0.65); signalL = 2.0; signalR = 0; }
+    else { carLaneTarget = Math.min(carLaneTarget + 0.65, 0.65); signalR = 2.0; signalL = 0; }
+    return;
+  }
+  // 4. Bãi cát -> thả cỏ lăn
+  spawnTumbleweed(x, y);
+}
+
+function stepWorld(dt) {
+  elapsed += dt;
+  const { s, hz, D0 } = sceneMetrics();
+  // Chuyển làn: lò xo giảm chấn gần tới hạn nên lướt êm, không lắc qua lại
+  const accel = (carLaneTarget - carLane) * 14.0 - laneVel * 7.0;
+  laneVel += accel * dt;
+  carLane += laneVel * dt;
+  steerTilt = laneVel * 0.6;
+
+  boost = Math.max(0, boost - dt * 0.35);
+  flameLength = Math.max(0, flameLength - dt * 0.5);
+  shake = Math.max(0, shake - dt * 1.6);
+  const b = boost * boost * (3 - 2 * boost);
+  const v = BASE_SPEED * P.speed * (1 + 2.2 * b);
+  frameBlur = v * dt;
+  dist = (dist + v * dt) % WRAP;
+  cloudDrift = (cloudDrift + dt * P.cloudSpeed) % 100000;
+
+  // Nhún nhẹ tần số thấp (mượt cả ở 20 FPS)
+  bobY = (Math.sin(elapsed * 2.7) * 0.6 + Math.sin(elapsed * 4.3 + 1.0) * 0.35) * (1 + boost * 1.5);
+  shakeOff = shake * Math.sin(elapsed * 29.0);
+
+  if (signalL > 0) signalL = Math.max(0, signalL - dt);
+  if (signalR > 0) signalR = Math.max(0, signalR - dt);
+  if (userActiveTimer > 0) userActiveTimer = Math.max(0, userActiveTimer - dt);
+
+  for (const tw of props) {
+    if (tw.scale < 0.05) continue;
+    const r = 15 * tw.scale * s;
+    tw.x += dt * (55 + 45 * tw.scale) * s;
+    tw.rot += dt * (55 + 45 * tw.scale) * s / r;
+    if (tw.x > W + 60 * s) tw.scale = 0;
+  }
+  if (Math.random() < dt * 0.10 * P.traffic) spawnTumbleweed(-40 * s, hz + D0 * (0.2 + 0.75 * Math.random()));
+}
+
+function isBusy() {
+  return curMix < 1 || userActiveTimer > 0 || boost > 0 || Math.abs(laneVel) > 0.02 || props.some(t => t.scale > 0.05);
+}
+
+/* ---------------- Render Loop ---------------- */
+let T0 = performance.now(), lastT = 0, paused = false;
+const propsA = new Float32Array(16);
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  cv._scale = dpr;
+  Gw = Math.max(1, Math.ceil(W / STEP));
+  Gh = Math.max(1, Math.ceil(H / STEP));
+  buildNoise();
+  commit(true);
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (paused) return;
+  if (now - lastT < (isBusy() ? 19 : 48)) return;
+  const dt = lastT ? Math.min((now - lastT) / 1000, 0.1) : 0.03;
+  lastT = now;
+  const e = Math.min((now - morphT0) / morphDur, 1);
+  curMix = e < 0.5 ? 2 * e * e : 1 - Math.pow(-2 * e + 2, 2) / 2;
+  stepWorld(dt);
+  draw(now);
+}
+
+function draw(now) {
+  if (!PR) return;
+  const { p, U } = PR;
+  gl.useProgram(p);
+  gl.viewport(0, 0, cv.width, cv.height);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, ftex[fromI]);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, ftex[toI]);
+  gl.uniform1i(U.uNoise, 0); gl.uniform1i(U.uFA, 1); gl.uniform1i(U.uFB, 2);
+  gl.uniform2f(U.uRes, cv.width / cv._scale, cv.height / cv._scale);
+  gl.uniform2f(U.uGrid, Gw, Gh);
+  gl.uniform1f(U.uScale, cv._scale);
+  gl.uniform1f(U.uSeed, (seed & 0xffff) / 65535.0);
+  gl.uniform1f(U.uStep, STEP);
+  gl.uniform1f(U.uMix, curMix);
+  gl.uniform1f(U.uTime, (now - T0) / 1000);
+  gl.uniform1f(U.uDebug, 0);
+  gl.uniform4f(U.uScene, resolveTod(), P.speed, boost, P.carColor);
+  gl.uniform4f(U.uCar, carLane, bobY, steerTilt, dist);
+  gl.uniform4f(U.uEffects, flameLength, signalL > 0 ? 1.0 : 0.0, signalR > 0 ? 1.0 : 0.0, shakeOff);
+  gl.uniform4f(U.uDrive, frameBlur, cloudDrift, 0, 0);
+  propsA.fill(0);
+  props.forEach((tw, i) => propsA.set([tw.x, tw.y, tw.rot, tw.scale], i * 4));
+  gl.uniform4fv(U.uProps, propsA);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ---------------- Điều khiển từ host / settings ---------------- */
+function applySettings(v) {
+  let field = false;
+  if (typeof v.seed === 'number' && v.seed !== seed) { seed = v.seed; buildNoiseTex(); buildNoise(); field = true; }
+  for (const k of Object.keys(DEFAULTS)) {
+    if (typeof v[k] !== 'number' || P[k] === v[k]) continue;
+    P[k] = v[k];
+    if (k === 'sigma' || k === 'warp') field = true;
+  }
+  if (field && FB) commit();
+}
+function drawGhosts() {
+  const box = document.getElementById('ghosts');
+  box.innerHTML = icons.map(ic => `<div class="ghost" style="left:${ic.x}px;top:${ic.y}px;width:${ic.w}px;height:${ic.h}px"><i></i><b></b></div>`).join('');
+}
+cv.addEventListener('pointerdown', e => handleClick(e.clientX, e.clientY));
+addEventListener('resize', resize);
+
+fetch('desert-drive.frag').then(r => r.text()).then(src => {
+  PR = program(src);
+  buildNoiseTex();
+  const g = document.createElement('div'); g.id = 'ghosts'; document.body.appendChild(g);
+  if (PREVIEW) document.body.classList.add('preview');
+  if (DEMO) {
+    document.body.classList.add('demo');
+    for (let c = 0; c < 2; c++) for (let r = 0; r < 6; r++) icons.push({ x: 8 + c * 78, y: 46 + r * 100, w: 76, h: 96 });
+  }
+  resize();
+  if (DEMO) drawGhosts();
+  let first = true;
+  const handle = m => {
+    if (m.t === 'pause') { paused = !!m.v; return; }
+    if (m.t === 'settings') { applySettings(m.v || {}); return; }
+    if (m.t === 'reset') { applySettings(Object.assign({}, DEFAULTS, m.v || {})); return; }
+    if (m.t !== 'icons') return;
+    const k = window.devicePixelRatio || 1;
+    icons = m.vis ? m.r.map(([l, t, r, b]) => ({ x: l / k, y: t / k, w: (r - l) / k, h: (b - t) / k })) : [];
+    if (PREVIEW) drawGhosts();
+    commit(first); first = false;
+  };
+  if (PREVIEW) {
+    addEventListener('message', ev => { if (ev.source === parent) handle(typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data); });
+    parent.postMessage(JSON.stringify({ t: 'ready' }), '*');
+  } else if (WALL) {
+    const host = window.chrome && window.chrome.webview;
+    if (host) { host.addEventListener('message', ev => handle(JSON.parse(ev.data))); host.postMessage('ready'); }
+  }
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>

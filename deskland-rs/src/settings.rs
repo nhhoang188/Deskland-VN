@@ -197,6 +197,31 @@ pub static BOXING_RING: [ParamDef; 7] = [
     p("sigma", "Độ rộng thảm icon", 40.0, 160.0, 1.0, 74.0, "px", Fmt::Num),
     p("warp", "Độ uốn mép thảm", 0.0, 60.0, 1.0, 22.0, "", Fmt::Num),
 ];
+pub static DESERT_DRIVE: [ParamDef; 7] = [
+    p("timeOfDay", "Thời điểm trong ngày", 0.0, 3.0, 1.0, 0.0, "", Fmt::Num),
+    p("speed", "Tốc độ hành trình", 0.5, 2.5, 0.05, 1.0, "", Fmt::Mul),
+    p("carColor", "Màu xe (0-3)", 0.0, 3.0, 1.0, 0.0, "", Fmt::Num),
+    p("traffic", "Cỏ lăn sa mạc", 0.0, 1.0, 0.01, 0.6, "", Fmt::Pct),
+    p("cloudSpeed", "Tốc độ mây bay", 0.0, 4.0, 0.05, 1.0, "", Fmt::Mul),
+    p("sigma", "Độ rộng thềm sa thạch", 45.0, 160.0, 1.0, 75.0, "px", Fmt::Num),
+    p("warp", "Độ uốn vách đá", 0.0, 60.0, 1.0, 26.0, "", Fmt::Num),
+];
+pub static SNOW_NIGHT: [ParamDef; 6] = [
+    p("snow", "Lượng tuyết rơi", 0.0, 1.0, 0.01, 0.6, "", Fmt::Pct),
+    p("wind", "Gió (trái ← → phải)", -1.0, 1.0, 0.05, 0.25, "", Fmt::Num),
+    p("lights", "Đèn thành phố", 0.0, 1.0, 0.01, 0.8, "", Fmt::Pct),
+    p("showKid", "Hiện phi hành gia & xe (0/1)", 0.0, 1.0, 1.0, 1.0, "", Fmt::Num),
+    p("sigma", "Độ rộng đụn tuyết", 45.0, 160.0, 1.0, 75.0, "px", Fmt::Num),
+    p("warp", "Độ uốn mép đụn tuyết", 0.0, 60.0, 1.0, 24.0, "", Fmt::Num),
+];
+pub static TERRACE_LIGHTS: [ParamDef; 6] = [
+    p("lights", "Đèn dọc bờ ruộng", 0.0, 1.0, 0.01, 0.7, "", Fmt::Pct),
+    p("fog", "Lượng mây mù", 0.0, 1.0, 0.01, 0.65, "", Fmt::Pct),
+    p("fogSpeed", "Tốc độ mây trôi", 0.0, 4.0, 0.05, 1.0, "", Fmt::Mul),
+    p("dusk", "Độ sáng trời chạng vạng", 0.0, 1.0, 0.01, 0.6, "", Fmt::Pct),
+    p("sigma", "Độ rộng mây ôm icon", 45.0, 160.0, 1.0, 75.0, "px", Fmt::Num),
+    p("warp", "Độ uốn mép mây", 0.0, 60.0, 1.0, 28.0, "", Fmt::Num),
+];
 const IDLE_CHOICES: [u32; 8] = [1, 2, 3, 5, 10, 15, 30, 60];
 
 fn defs(theme: &str) -> &'static [ParamDef] {
@@ -216,6 +241,9 @@ fn defs(theme: &str) -> &'static [ParamDef] {
         "summer-porch" => &SUMMER_PORCH,
         "cats" => &CATS,
         "boxing-ring" => &BOXING_RING,
+        "desert-drive" => &DESERT_DRIVE,
+        "snow-night" => &SNOW_NIGHT,
+        "terrace-lights" => &TERRACE_LIGHTS,
         _ => &BEACH,
     }
 }

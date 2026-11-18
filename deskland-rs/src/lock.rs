@@ -115,6 +115,32 @@ pub fn install_saver(idle_mins: u32) -> Result<(), String> {
     Ok(())
 }
 
+/// Bản sao `.scr` chỉ được chép lúc bật tính năng, nên sau khi cập nhật exe nó vẫn là bản cũ
+/// (không biết chủ đề mới -> rơi về 'beach'). Gọi lúc khởi động: nếu đang dùng và khác exe hiện tại thì chép lại.
+/// Không đổi gì trong registry; nếu `.scr` đang chạy (file bị khóa) thì để lần khởi động sau.
+pub fn refresh_saver_copy() {
+    if !saver_installed() {
+        return;
+    }
+    let Ok(exe) = std::env::current_exe() else { return };
+    let dst = saver_path();
+    let cur = reg_get_string(HKEY_CURRENT_USER, DESKTOP_KEY, "SCRNSAVE.EXE").unwrap_or_default();
+    if !cur.eq_ignore_ascii_case(&dst.to_string_lossy()) {
+        return; // đang trỏ vào tên cũ Deskland.scr: để người dùng bật lại trong menu
+    }
+    let same = match (std::fs::read(&exe), std::fs::read(&dst)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    };
+    if same {
+        return;
+    }
+    match std::fs::copy(&exe, &dst) {
+        Ok(_) => crate::log!("Đã cập nhật trình bảo vệ màn hình {} theo bản exe hiện tại", dst.display()),
+        Err(e) => crate::log!("Chưa cập nhật được trình bảo vệ màn hình ({e}), sẽ thử lại lần khởi động sau"),
+    }
+}
+
 /// Trình bảo vệ màn hình hiện tại có bật "khi tiếp tục, hiện màn hình đăng nhập" không.
 pub fn saver_secure() -> bool {
     reg_get_string(HKEY_CURRENT_USER, DESKTOP_KEY, "ScreenSaverIsSecure").is_some_and(|v| v.trim() == "1")

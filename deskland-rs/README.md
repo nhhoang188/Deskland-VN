@@ -1,6 +1,6 @@
 # deskland-rs — Phiên bản Rust Native (Win32 + OpenGL 3.3)
 
-Phiên bản viết lại hoàn toàn bằng **Rust thuần (1 tiến trình duy nhất, Win32 + OpenGL 3.3 qua WGL)** của Deskland, thay thế kiến trúc đa tiến trình C# + WebView2 thường trực để tối ưu triệt để RAM/CPU, bổ sung **tương tác chuột trực tiếp trên màn hình nền**, nâng tổng số chủ đề lên **16 chủ đề** và chuyển sang cơ chế **màn hình khóa thật 100% của Windows**.
+Phiên bản viết lại hoàn toàn bằng **Rust thuần (1 tiến trình duy nhất, Win32 + OpenGL 3.3 qua WGL)** của Deskland, thay thế kiến trúc đa tiến trình C# + WebView2 thường trực để tối ưu triệt để RAM/CPU, bổ sung **tương tác chuột trực tiếp trên màn hình nền**, nâng tổng số chủ đề lên **19 chủ đề** và chuyển sang cơ chế **màn hình khóa thật 100% của Windows**.
 
 ---
 
@@ -9,7 +9,7 @@ Phiên bản viết lại hoàn toàn bằng **Rust thuần (1 tiến trình duy
 1. **Siêu nhẹ — 1 tiến trình duy nhất (`deskland-rs.exe` ~2 MB):**
    - Không nuôi trình duyệt ngầm khi chạy hình nền: chỉ **1 tiến trình** (~65–98 MB Private RAM tùy độ phân giải & số màn hình), giảm **~6–8 lần RAM** so với bản C# + WebView2 (~11 tiến trình, ~620–790 MB RAM).
    - Một ngữ cảnh OpenGL 3.3 dùng chung cho mọi màn hình; biên dịch shader & khởi tạo khung hình đầu tiên chỉ mất **~350–480 ms**.
-2. **Đầy đủ 16 chủ đề thích ứng biểu tượng + Tương tác Click chuột riêng biệt:**
+2. **Đầy đủ 19 chủ đề thích ứng biểu tượng + Tương tác Click chuột riêng biệt:**
    - Tự động đọc vị trí biểu tượng màn hình nền (`SysListView32`), dựng trường khoảng cách (SDF) trên CPU và uốn lượn bờ biển, đồng cỏ, rạn cát, tán rừng, hàng rào sân vận động... ôm quanh các nhóm icon theo thời gian thực.
    - Mỗi chủ đề đều có phản hồi vật lý / hoạt ảnh riêng khi người dùng click chuột trái vào vùng trống trên màn hình nền.
 3. **Bắt chuột thông minh & Adaptive FPS (`20 -> 50 FPS`):**
@@ -50,6 +50,9 @@ Phiên bản viết lại hoàn toàn bằng **Rust thuần (1 tiến trình duy
 | 14 | `summer-porch` | `porch`, `corgi`, `corgi-porch`, `veranda` | **Hiên nhà ngày hạ** *(Mới)* | Hiên gỗ mái ngói âm dương kiểu Ghibli, đàn Corgi ngủ trưa lăn mình trước quạt bàn cổ điển, đĩa dưa hấu đỏ, sách mở và luống vườn xanh ôm quanh icon. **Click:** Bấm Corgi để gãi bụng bắn tim hồng, bấm quạt bàn đổi nấc gió, gõ chuông gió đồng, cắn dưa hấu hoặc thả bướm / đom đóm trên sân. |
 | 15 | `cats` | `kittens`, `hillside-kittens` | **Mèo con trên đồi** *(Mới)* | Đồi cỏ trời xanh mây trắng, cây lá đung đưa, lá bay, bướm vàng và đàn mèo mập chân ngắn (10 bộ lông) đi dạo, liếm lông, ngủ cuộn tròn / nằm nghiêng / nằm ngửa thở phập phồng. Vẽ bằng **tiny-skia trên CPU** (`src/themes/cats/`, mỗi file `.rs` ứng với một file `prototype/cats-*.js`) thay vì shader, để giống hệt bản Canvas 2D. **Click:** Bấm mèo để vuốt ve (nhảy cẫng, chùm tim, mắt cười); bấm cây / lùm cây để rung rụng lá; bấm cỏ thả **cuộn len** cho 3 chú mèo gần nhất chạy tới vờn, khều lăn đi rồi đuổi theo; bấm trời gọi bướm. |
 | 16 | `boxing-ring` | `boxing`, `ring`, `arcade-boxing`, `punch` | **Võ đài quyền anh** *(Mới)* | Phòng tập & võ đài quyền anh Arcade nâng cao góc nhìn 3/4, hai võ sĩ đối kháng kết hợp hệ lò xo giảm chấn Squash & Stretch, phóng găng đa vùng, khói tròn puff, sao choáng `@ @`, thanh máu HUD và thảm tập EVA ôm gọn icon. **Click:** Bấm nửa phải/trái đài để tung đòn búa đỉnh đầu, móc ngang má, đấm thẳng cằm hoặc đấm sườn cong chữ C; bấm bao cát treo, lốp xe & búa tạ hoặc đồng hồ hiệp đấu để tương tác đạo cụ. |
+| 17 | `desert-drive` | `outrun`, `highway`, `desert`, `retro-drive` | **Cung đường sa mạc** *(Mới)* | Cao tốc sa mạc viễn tây trải dài bất tận đến chân trời bên khối núi sa thạch Monument Valley sừng sững, cùng xe thể thao retro 80s đuôi bẹt lướt theo phối cảnh 1 điểm tụ. Đổi cảnh theo giờ (Trưa nắng / Hoàng hôn / Đêm sao). **Click:** Bấm mặt đường bên trái/phải xe để chuyển làn kèm xi-nhan nhấp nháy; bấm xe để kích hoạt **Nitro Boost** phụt lửa kép từ ống xả & rung camera; bấm bầu trời đổi giờ; bấm bãi cát hai bên thả cỏ lăn nảy qua đường; vách sa thạch ôm gọn icon Desktop. |
+| 18 | `snow-night` | `snow`, `winter`, `snowy-city`, `astronaut` | **Đêm tuyết ngắm phố** *(Mới)* | Đỉnh đồi tuyết trong đêm nhìn xuống thành phố lên đèn (cửa sổ sáng, đèn hàng không đỏ nhấp nháy, dòng xe trên cao tốc), rặng thông phủ tuyết, tuyết rơi 3 lớp và phi hành gia ngồi trên nóc chiếc xe đỏ kéo violin. **Click:** Bấm thành phố bắn pháo hoa; bấm rặng thông cho cây rung và tuyết rụng; bấm trời gọi gió giật; bấm phi hành gia, xe hoặc bãi tuyết để phi hành gia kéo đàn hăng say; đụn tuyết ôm gọn icon Desktop. |
+| 19 | `terrace-lights` | `terrace`, `terraces`, `rice-terrace`, `lanterns` | **Ruộng bậc thang lên đèn** *(Mới)* | Giờ xanh chạng vạng: ruộng bậc thang uốn lượn với hàng nghìn đốm đèn dọc bờ ruộng, bản làng sáng đèn dưới thung, biển mây trôi chậm qua thung lũng và núi xa xanh mờ. **Click:** Bấm ruộng cho đèn bừng sáng theo vòng lan; bấm thung lũng / bản làng thả đèn trời; bấm bầu trời nổi gió đẩy mây trôi nhanh; làn mây mỏng ôm quanh icon Desktop. |
 
 > **Bật / tắt tương tác chuột:** Có thể bật hoặc tắt bất kỳ lúc nào ngay tại menu chuột phải ở khay hệ thống (**Tương tác chuột trên màn hình nền**) hoặc trong cửa sổ **Cài đặt**.
 

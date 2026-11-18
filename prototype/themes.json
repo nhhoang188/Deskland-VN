@@ -1468,6 +1468,259 @@
           ]
         }
       ]
+    },
+    {
+      "id": "desert-drive",
+      "name": "Cung đường sa mạc",
+      "desc": "Cao tốc sa mạc viễn tây trải dài bất tận đến chân trời bên khối núi sa thạch Monument Valley sừng sững, cùng xe thể thao retro 80s đuôi bẹt lướt theo phối cảnh 1 điểm tụ. Hỗ trợ đổi cảnh theo giờ (Trưa nắng / Hoàng hôn / Đêm sao), tương tác click chuyển làn trái/phải, tăng tốc Nitro phụt lửa ống xả và thềm sa thạch ôm gọn icon Desktop.",
+      "page": "desert-drive.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/desert-drive.jpg) center / cover no-repeat, linear-gradient(180deg, #588cb8 0%, #d88e6e 48%, #bc4832 54%, #e2905c 68%, #3e3238 100%)",
+      "groups": [
+        {
+          "name": "Khung cảnh & Thời gian",
+          "params": [
+            {
+              "key": "timeOfDay",
+              "label": "Thời điểm trong ngày",
+              "hint": "Tự động đổi cảnh theo giờ máy hoặc ghim cố định một buổi ưa thích",
+              "options": [
+                "Tự động",
+                "Trưa nắng",
+                "Hoàng hôn",
+                "Đêm sao"
+              ],
+              "default": 0
+            },
+            {
+              "key": "speed",
+              "label": "Tốc độ hành trình",
+              "hint": "Tốc độ xe chạy và tốc độ cuộn vạch kẻ đường",
+              "min": 0.5,
+              "max": 2.5,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            },
+            {
+              "key": "traffic",
+              "label": "Cỏ lăn sa mạc",
+              "hint": "Tần suất xuất hiện của bụi cỏ lăn tumbleweed bay ngang qua đường",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            },
+            {
+              "key": "cloudSpeed",
+              "label": "Tốc độ mây bay",
+              "hint": "Mây trôi nhanh hay chậm trên bầu trời (0 = mây đứng yên)",
+              "min": 0,
+              "max": 4,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            }
+          ]
+        },
+        {
+          "name": "Xe & Thềm sa thạch",
+          "params": [
+            {
+              "key": "carColor",
+              "label": "Màu xe thể thao",
+              "hint": "Chọn màu sơn ngoại thất cho chiếc siêu xe cổ điển 80s",
+              "options": [
+                "Đỏ anh đào",
+                "Hồng neon Synthwave",
+                "Trắng ngọc trai",
+                "Đen tuyền"
+              ],
+              "default": 0
+            },
+            {
+              "key": "sigma",
+              "label": "Độ rộng thềm sa thạch",
+              "hint": "Độ rộng thềm đá sa thạch đỏ tự động trải ôm quanh nhóm biểu tượng Desktop",
+              "min": 45,
+              "max": 160,
+              "step": 1,
+              "default": 75,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "Độ uốn vách đá",
+              "hint": "Độ uốn lượn và gồ ghề của mép thềm đá quanh các biểu tượng",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 26
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "snow-night",
+      "name": "Đêm tuyết ngắm phố",
+      "desc": "Đỉnh đồi tuyết trong đêm nhìn xuống thành phố lên đèn: dãy nhà cao tầng sáng cửa sổ, đèn hàng không đỏ nhấp nháy, dòng xe chảy trên cao tốc, đồi tối lấm tấm đèn nhà và rặng thông phủ tuyết. Tuyết rơi 3 lớp xa gần, một phi hành gia ngồi trên nóc chiếc xe đỏ phủ tuyết kéo violin, nốt nhạc bay lên. Click thành phố bắn pháo hoa, rung cây cho tuyết rụng, gọi gió giật hoặc để phi hành gia kéo đàn hăng say; đụn tuyết ôm gọn icon Desktop.",
+      "page": "snow-night.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/snow-night.jpg) center / cover no-repeat, linear-gradient(180deg, #080b14 0%, #1e2030 45%, #0d1018 62%, #c9d2e6 70%, #8c99b8 100%)",
+      "groups": [
+        {
+          "name": "Tuyết & Gió",
+          "params": [
+            {
+              "key": "snow",
+              "label": "Lượng tuyết rơi",
+              "hint": "Mật độ bông tuyết ở cả 3 lớp xa gần",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            },
+            {
+              "key": "wind",
+              "label": "Gió",
+              "hint": "Hướng và sức gió làm tuyết bay xiên (âm: sang trái, dương: sang phải)",
+              "min": -1,
+              "max": 1,
+              "step": 0.05,
+              "default": 0.25
+            }
+          ]
+        },
+        {
+          "name": "Thành phố & Phi hành gia",
+          "params": [
+            {
+              "key": "lights",
+              "label": "Đèn thành phố",
+              "hint": "Số cửa sổ, đèn đường và đèn nhà trên đồi đang sáng",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.8,
+              "format": "percent"
+            },
+            {
+              "key": "showKid",
+              "label": "Hiển thị phi hành gia & xe",
+              "hint": "Phi hành gia ngồi trên nóc chiếc xe đỏ kéo violin giữa đồi tuyết",
+              "options": [
+                "Ẩn",
+                "Hiện"
+              ],
+              "default": 1
+            },
+            {
+              "key": "sigma",
+              "label": "Độ rộng đụn tuyết",
+              "hint": "Độ rộng đụn tuyết ôm quanh nhóm biểu tượng Desktop",
+              "min": 45,
+              "max": 160,
+              "step": 1,
+              "default": 75,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "Độ uốn mép đụn tuyết",
+              "hint": "Độ uốn lượn của mép đụn tuyết quanh các biểu tượng",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 24
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "terrace-lights",
+      "name": "Ruộng bậc thang lên đèn",
+      "desc": "Giờ xanh chạng vạng trên vùng núi: ruộng bậc thang uốn lượn với hàng nghìn đốm đèn nhỏ chạy dọc bờ ruộng, bản làng dưới thung sáng đèn vàng ấm, biển mây trôi chậm qua thung lũng và các dãy núi xanh mờ phía xa. Click ruộng cho đèn bừng sáng theo vòng lan, click thung lũng thả đèn trời, click bầu trời nổi gió đẩy mây; làn mây mỏng ôm quanh icon Desktop.",
+      "page": "terrace-lights.html",
+      "status": "ready",
+      "product": "free",
+      "thumb": "url(thumbs/terrace-lights.jpg) center / cover no-repeat, linear-gradient(180deg, #0f1c33 0%, #4a5d7c 30%, #8a9ab4 45%, #1d3a24 60%, #0e2414 100%)",
+      "groups": [
+        {
+          "name": "Đèn & Bầu trời",
+          "params": [
+            {
+              "key": "lights",
+              "label": "Đèn dọc bờ ruộng",
+              "hint": "Mật độ đốm đèn nhỏ chạy dọc các bờ ruộng bậc thang",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.7,
+              "format": "percent"
+            },
+            {
+              "key": "dusk",
+              "label": "Độ sáng trời chạng vạng",
+              "hint": "Từ đêm tối hẳn (0%) đến giờ xanh còn ánh trời (100%)",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.6,
+              "format": "percent"
+            }
+          ]
+        },
+        {
+          "name": "Mây mù",
+          "params": [
+            {
+              "key": "fog",
+              "label": "Lượng mây mù",
+              "hint": "Độ dày biển mây trong thung lũng",
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "default": 0.65,
+              "format": "percent"
+            },
+            {
+              "key": "fogSpeed",
+              "label": "Tốc độ mây trôi",
+              "hint": "Mây trôi nhanh hay chậm (0 = mây đứng yên)",
+              "min": 0,
+              "max": 4,
+              "step": 0.05,
+              "default": 1,
+              "format": "times"
+            },
+            {
+              "key": "sigma",
+              "label": "Độ rộng mây ôm icon",
+              "hint": "Độ rộng làn mây mỏng ôm quanh nhóm biểu tượng Desktop",
+              "min": 45,
+              "max": 160,
+              "step": 1,
+              "default": 75,
+              "unit": "px"
+            },
+            {
+              "key": "warp",
+              "label": "Độ uốn mép mây",
+              "hint": "Độ bồng bềnh của mép mây quanh các biểu tượng",
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "default": 28
+            }
+          ]
+        }
+      ]
     }
   ]
 }

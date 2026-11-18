@@ -1,4 +1,4 @@
-//! deskland-rs: bản Rust native (1 tiến trình, OpenGL 3.3) của Deskland — 16 chủ đề tương tác thích ứng.
+//! deskland-rs: bản Rust native (1 tiến trình, OpenGL 3.3) của Deskland — 19 chủ đề tương tác thích ứng.
 //! Chạy:   deskland-rs.exe [--theme <id>] [--fps 20] [--settings]
 //! Thoát:  deskland-rs.exe --quit   (hoặc menu khay hệ thống)
 
@@ -26,6 +26,9 @@ mod themes {
     pub mod stadium;
     pub mod summer_porch;
     pub mod tet_sakura;
+    pub mod desert_drive;
+    pub mod snow_night;
+    pub mod terrace_lights;
 }
 mod wgl;
 
@@ -104,6 +107,9 @@ pub const THEMES: &[(&str, &str, usize)] = &[
     ("summer-porch", "Hiên nhà ngày hạ", 115),
     ("cats", "Mèo con trên đồi", 116),
     ("boxing-ring", "Võ đài quyền anh", 117),
+    ("desert-drive", "Cung đường sa mạc", 118),
+    ("snow-night", "Đêm tuyết ngắm phố", 119),
+    ("terrace-lights", "Ruộng bậc thang lên đèn", 120),
 ];
 
 pub fn canonical_theme(id: &str) -> Option<&'static str> {
@@ -118,6 +124,9 @@ pub fn canonical_theme(id: &str) -> Option<&'static str> {
         "porch" | "corgi" | "corgi-porch" | "veranda" | "summer_porch" => Some("summer-porch"),
         "kittens" | "hillside-kittens" => Some("cats"),
         "boxing" | "ring" | "arcade-boxing" | "punch" | "boxing_ring" => Some("boxing-ring"),
+        "outrun" | "highway" | "desert" | "retro-drive" | "desert_drive" => Some("desert-drive"),
+        "snow" | "winter" | "snowy-city" | "astronaut" | "snow_night" => Some("snow-night"),
+        "terrace" | "terraces" | "rice-terrace" | "lanterns" | "terrace_lights" => Some("terrace-lights"),
         other => THEMES.iter().find(|&&(tid, _, _)| tid == other).map(|&(tid, _, _)| tid),
     }
 }
@@ -205,7 +214,14 @@ unsafe extern "system" fn msg_proc(h: HWND, m: u32, w: WPARAM, l: LPARAM) -> LRE
         WM_WTSSESSION_CHANGE_ => {
             match w {
                 WTS_SESSION_LOCK_ => SESSION_LOCKED.with(|c| c.set(true)),
-                WTS_SESSION_UNLOCK_ => SESSION_LOCKED.with(|c| c.set(false)),
+                WTS_SESSION_UNLOCK_ => {
+                    SESSION_LOCKED.with(|c| c.set(false));
+                    // Lúc khởi động .scr có thể đang chạy (file bị khóa): mở khóa xong thì nó đã thoát, đồng bộ lại
+                    std::thread::spawn(|| {
+                        std::thread::sleep(std::time::Duration::from_secs(3));
+                        lock::refresh_saver_copy();
+                    });
+                }
                 _ => {}
             }
             0
@@ -481,7 +497,10 @@ fn web_init(app: &App) -> serde_json::Value {
                 "commute",
                 "summer-porch",
                 "cats",
-                "boxing-ring"
+                "boxing-ring",
+                "desert-drive",
+                "snow-night",
+                "terrace-lights"
             ],
             // Chưa port: cây dừa, cậu bé, mèo -> ẩn thanh trượt, xem trước cũng tắt cho giống desktop
             "hide": ["palms", "showBoy", "showCat"],
@@ -639,6 +658,9 @@ impl App {
             "summer-porch" => Box::new(themes::summer_porch::SummerPorch::new(gl, w, h, buf_w, buf_h, scale, seed, themes::summer_porch::Params::from_json(p), rs, now)),
             "cats" => Box::new(themes::cats::Cats::new(gl, w, h, buf_w, buf_h, scale, seed, themes::cats::Params::from_json(p), rs, now)),
             "boxing-ring" => Box::new(themes::boxing_ring::BoxingRing::new(gl, w, h, buf_w, buf_h, scale, seed, themes::boxing_ring::Params::from_json(p), rs, now)),
+            "desert-drive" => Box::new(themes::desert_drive::DesertDrive::new(gl, w, h, buf_w, buf_h, scale, seed, themes::desert_drive::Params::from_json(p), rs, now)),
+            "snow-night" => Box::new(themes::snow_night::SnowNight::new(gl, w, h, buf_w, buf_h, scale, seed, themes::snow_night::Params::from_json(p), rs, now)),
+            "terrace-lights" => Box::new(themes::terrace_lights::TerraceLights::new(gl, w, h, buf_w, buf_h, scale, seed, themes::terrace_lights::Params::from_json(p), rs, now)),
             _ => Box::new(themes::beach::Beach::new(gl, w, h, buf_w, buf_h, scale, seed, themes::beach::Params::from_json(p), rs, now)),
         }
     }
@@ -664,6 +686,9 @@ impl App {
             "summer-porch" => themes::summer_porch::FRAG,
             "cats" => themes::cats::FRAG,
             "boxing-ring" => themes::boxing_ring::FRAG,
+            "desert-drive" => themes::desert_drive::FRAG,
+            "snow-night" => themes::snow_night::FRAG,
+            "terrace-lights" => themes::terrace_lights::FRAG,
             _ => themes::beach::FRAG,
         };
         let t0 = Instant::now();
@@ -1240,6 +1265,9 @@ fn main() {
         if saver { " (trình bảo vệ màn hình)" } else { "" },
         cfg.theme
     );
+    if !saver && !is_scr {
+        lock::refresh_saver_copy();
+    }
     CURRENT_THEME.with(|c| c.set(theme_cmd(&cfg.theme)));
     let lock_sync = cfg.lock_sync;
     LOCK_SYNC.with(|c| c.set(lock_sync));

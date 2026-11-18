@@ -834,6 +834,129 @@
           "hint": "Straight or organically rounded gym mat borders around icon clusters"
         }
       }
+    },
+    "desert-drive": {
+      "name": "Desert Highway",
+      "desc": "An endless southwestern desert highway vanishing into the horizon beneath the majestic Monument Valley sandstone buttes, featuring an 80s retro supercar cruising in single-point perspective. Adapts dynamically to time of day (High Noon / Sunset / Starry Night), interactive left/right lane switching, Nitro Boost exhaust flame bursts, and red sandstone mesa plateau hugging desktop icons.",
+      "groups": [
+        "Landscape & Time",
+        "Vehicle & Mesa Shelf"
+      ],
+      "params": {
+        "timeOfDay": {
+          "label": "Time of day",
+          "hint": "Automatically match system clock or lock to your preferred desert lighting",
+          "options": [
+            "Automatic",
+            "High Noon",
+            "Sunset",
+            "Starry Night"
+          ]
+        },
+        "speed": {
+          "label": "Cruising speed",
+          "hint": "Velocity of the supercar and scrolling speed of road markings"
+        },
+        "traffic": {
+          "label": "Tumbleweeds",
+          "hint": "Frequency of rolling tumbleweeds drifting across the highway"
+        },
+        "cloudSpeed": {
+          "label": "Cloud speed",
+          "hint": "How fast clouds drift across the sky (0 = still)"
+        },
+        "carColor": {
+          "label": "Car paint color",
+          "hint": "Select exterior paint for the classic 80s supercar",
+          "options": [
+            "Cherry Red",
+            "Neon Synthwave Pink",
+            "Pearl White",
+            "Midnight Black"
+          ]
+        },
+        "sigma": {
+          "label": "Mesa shelf width",
+          "hint": "How far the red sandstone mesa terrace extends around desktop icon clusters",
+          "unit": "px"
+        },
+        "warp": {
+          "label": "Cliff edge curve",
+          "hint": "Organic curvature and rock stratification of the mesa ledge"
+        }
+      }
+    },
+    "snow-night": {
+      "name": "Snowy City Overlook",
+      "desc": "A snowy hilltop at night overlooking a glittering city: high-rises with lit windows, blinking red aviation lights, traffic streaming along the highway, dark hills dotted with house lights and snow-laden pines. Three layers of falling snow and an astronaut sitting on the roof of a snow-covered red car playing the violin, music notes drifting up. Click the city for fireworks, shake the pines to drop snow, summon a gust of wind or make the astronaut play with gusto; snowdrifts hug your desktop icons.",
+      "groups": [
+        "Snow & Wind",
+        "City & Astronaut"
+      ],
+      "params": {
+        "snow": {
+          "label": "Snowfall",
+          "hint": "Density of snowflakes across all three layers"
+        },
+        "wind": {
+          "label": "Wind",
+          "hint": "Wind direction and strength slanting the snow (negative: left, positive: right)"
+        },
+        "lights": {
+          "label": "City lights",
+          "hint": "How many windows, street lamps and hillside houses are lit"
+        },
+        "showKid": {
+          "label": "Show astronaut & car",
+          "hint": "An astronaut sitting on a red car's roof playing the violin on the snowy hill",
+          "options": [
+            "Hide",
+            "Show"
+          ]
+        },
+        "sigma": {
+          "label": "Snowdrift width",
+          "hint": "Width of the snowdrift hugging your desktop icon groups"
+        },
+        "warp": {
+          "label": "Snowdrift edge warp",
+          "hint": "How wavy the snowdrift edge is around the icons"
+        }
+      }
+    },
+    "terrace-lights": {
+      "name": "Terrace Lights",
+      "desc": "Blue hour in the mountains: winding rice terraces strung with thousands of tiny lights along every ridge, a valley village glowing warm, a sea of clouds drifting slowly through the valley and misty blue peaks beyond. Click the terraces for a wave of brightening lights, click the valley to release sky lanterns, click the sky for a gust that pushes the clouds; a soft veil of mist hugs your desktop icons.",
+      "groups": [
+        "Lights & Sky",
+        "Mist"
+      ],
+      "params": {
+        "lights": {
+          "label": "Terrace lights",
+          "hint": "Density of tiny lights along the terrace ridges"
+        },
+        "dusk": {
+          "label": "Twilight brightness",
+          "hint": "From full night (0%) to blue hour with lingering skylight (100%)"
+        },
+        "fog": {
+          "label": "Mist amount",
+          "hint": "Thickness of the sea of clouds in the valley"
+        },
+        "fogSpeed": {
+          "label": "Cloud drift speed",
+          "hint": "How fast the clouds drift (0 = still)"
+        },
+        "sigma": {
+          "label": "Icon mist width",
+          "hint": "Width of the soft mist hugging your desktop icon groups"
+        },
+        "warp": {
+          "label": "Mist edge warp",
+          "hint": "How billowy the mist edge is around the icons"
+        }
+      }
     }
   }
 }
